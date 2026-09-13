@@ -130,3 +130,14 @@ export const gmailSyncState = sqliteTable("gmail_sync_state", {
   historyId: text("history_id").notNull(),
   updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
+
+// --- Fondo de emergencia ----------------------------------------------------
+// Fila única — el "monto actual" no se duplica acá, se lee en vivo del saldo
+// de la cuenta ligada (mismo principio que el resto de la app: nada de
+// saldos manuales que se puedan desincronizar).
+export const fondoEmergencia = sqliteTable("fondo_emergencia", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  cuentaId: integer("cuenta_id").references(() => cuentas.id).notNull(),
+  metaMeses: real("meta_meses").notNull(),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});

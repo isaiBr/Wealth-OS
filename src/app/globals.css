@@ -20,6 +20,13 @@
   --hero-muted: #98a99c;
   --hero-accent: #6fcba3;
 
+  --cat-1: #12805e;
+  --cat-2: #c1622b;
+  --cat-3: #2f63b0;
+  --cat-4: #9c3b6b;
+  --cat-5: #b98a1e;
+  --cat-6: #7d519e;
+
   --shadow-card: 0 1px 2px rgba(22, 33, 27, 0.04), 0 1px 1px rgba(22, 33, 27, 0.03);
   --radius-sm: 10px;
   --radius-md: 14px;
@@ -48,6 +55,14 @@
     --hero-ink: #f3f6ef;
     --hero-muted: #7e8f82;
     --hero-accent: #4fbb8e;
+
+    --cat-1: #219873;
+    --cat-2: #ce7440;
+    --cat-3: #5680c7;
+    --cat-4: #c36b93;
+    --cat-5: #a67d2e;
+    --cat-6: #a67bc4;
+
     --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.25);
     color-scheme: dark;
   }
@@ -69,11 +84,14 @@ body {
 .brand-mark,
 .screen-title,
 .hero-primary .valor,
+.hero-secondary .valor,
 .stat .valor,
 .cuenta .saldo,
 .tx-amount,
 .insight-num,
-.summary-row .valor {
+.summary-row .valor,
+.plan-row .pct,
+.cuota-total .valor {
   font-family: var(--font-serif), Georgia, serif;
 }
 
@@ -299,6 +317,44 @@ button {
   color: var(--hero-ink);
   font-weight: 500;
 }
+@media (min-width: 900px) {
+  .hero-primary {
+    flex: 1.1;
+  }
+  .hero-secondary {
+    flex: 1;
+  }
+}
+
+/* ---------- patrimonio neto (Inicio) ---------- */
+.hero-secondary .label {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin-bottom: 6px;
+}
+.hero-secondary .valor {
+  font-size: 27px;
+  font-weight: 520;
+}
+.hero-secondary .delta {
+  font-size: 12px;
+  color: var(--accent);
+  margin-top: 4px;
+}
+.trend-wrap {
+  margin-top: 12px;
+}
+.trend-wrap svg {
+  display: block;
+  width: 100%;
+  height: 84px;
+  overflow: visible;
+}
+.trend-axis {
+  font-size: 10.5px;
+  color: var(--ink-faint);
+  margin-top: 4px;
+}
 
 /* ---------- insights (Inicio) ---------- */
 .insights-row {
@@ -395,6 +451,132 @@ button {
   font-weight: 520;
 }
 
+.stats-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 2px 0 9px;
+}
+
+/* ---------- compromisos recurrentes (Inicio) ---------- */
+.commit-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 24px;
+}
+.commit-chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 13px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.commit-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--surface-sunken);
+}
+.commit-chip.warn .commit-icon {
+  background: var(--warn-soft);
+}
+.commit-body {
+  min-width: 0;
+}
+.commit-label {
+  display: block;
+  font-size: 10.5px;
+  color: var(--ink-muted);
+  margin-bottom: 2px;
+  line-height: 1.3;
+}
+.commit-val {
+  display: block;
+  font-size: 15px;
+  line-height: 1.2;
+}
+.commit-chip.warn .commit-val {
+  color: var(--warn);
+}
+
+/* ---------- gasto por categoría (donut, Inicio) ---------- */
+.chart-card {
+  margin-top: 12px;
+}
+.donut-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 20px;
+}
+.legend {
+  flex: 1;
+  min-width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+}
+.legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.legend-item .nombre {
+  flex: 1;
+  color: var(--ink);
+}
+.legend-item .pct {
+  color: var(--ink-muted);
+  font-size: 11.5px;
+}
+
+/* ---------- plan de gasto consciente ---------- */
+.plan-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.plan-row:last-child {
+  border-bottom: none;
+}
+.plan-row .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.plan-row .info {
+  flex: 1;
+  min-width: 0;
+}
+.plan-row .nombre {
+  font-size: 13.5px;
+}
+.plan-row .meta {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+.plan-row .pct {
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
 /* ---------- cuentas ---------- */
 .cuentas {
   display: flex;
@@ -446,6 +628,139 @@ button {
 .cuenta .saldo {
   font-size: 16px;
   flex-shrink: 0;
+}
+
+/* ---------- fondo de emergencia (Cuentas) ---------- */
+.meta-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13.5px;
+  margin-bottom: 9px;
+}
+.meta-top .cifras {
+  color: var(--ink-muted);
+}
+.meta-bar-track {
+  height: 8px;
+  background: var(--surface-sunken);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.meta-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+}
+.meta-note {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 9px;
+}
+
+/* ---------- deudas (Cuentas) ---------- */
+.debt-card .debt-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 10px;
+}
+.debt-card .debt-name {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.debt-bar-track {
+  height: 6px;
+  background: var(--surface-sunken);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.debt-bar-fill {
+  height: 100%;
+  background: var(--danger);
+  border-radius: 3px;
+}
+.debt-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: var(--ink-muted);
+}
+.debt-due {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 6px;
+}
+.debt-due b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------- cuotas activas (Presupuesto) ---------- */
+.cuota-row {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.cuota-row:last-of-type {
+  border-bottom: none;
+}
+.cuota-top {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 5px;
+}
+.cuota-top .comercio {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 8px;
+}
+.cuota-top .monto {
+  color: var(--ink-muted);
+  flex-shrink: 0;
+}
+.cuota-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.cuota-progress {
+  flex: 1;
+  height: 4px;
+  background: var(--surface-sunken);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.cuota-progress i {
+  display: block;
+  height: 100%;
+  background: var(--cat-5);
+  border-radius: 2px;
+}
+.cuota-meta .n {
+  font-size: 11px;
+  color: var(--ink-faint);
+  flex-shrink: 0;
+}
+.cuota-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.cuota-note {
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+  padding-bottom: 2px;
+  line-height: 1.4;
 }
 
 /* ---------- transacciones ---------- */

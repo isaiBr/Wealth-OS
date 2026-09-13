@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
 import { db } from "./client";
-import { categorias, cuentas, transacciones } from "./schema";
+import { categorias, comprasCuotas, cuentas, fondoEmergencia, tarjetas, transacciones } from "./schema";
 
 export type Cuenta = typeof cuentas.$inferSelect;
 export type Categoria = typeof categorias.$inferSelect;
@@ -237,4 +237,147 @@ export async function crearCuenta(input: NuevaCuenta) {
 
 export async function alternarDestacada(cuentaId: number, destacada: boolean) {
   await db.update(cuentas).set({ destacada }).where(eq(cuentas.id, cuentaId));
+}
+
+/**
+ * Serie de patrimonio neto reproduciendo el historial de transacciones día a
+ * día — no hay tabla de snapshots, se reconstruye igual que `saldoCuenta`
+ * pero acumulando en el tiempo. Excluye tarjetas de crédito (deuda, no
+ * patrimonio). Devuelve como máximo los últimos `dias` días; menos si el
+ * historial real es más corto.
+ */
+export async function patrimonioHistorico(dias: number): Promise<{ fecha: string; valor: number }[]> {
+  const todasCuentas = await listarCuentas();
+  const cuentasLiquidas = todasCuentas.filter((c) => c.tipo !== "tarjeta_credito");
+  const idsLiquidas = new Set(cuentasLiquidas.map((c) => c.id));
+
+  const todasTx = await db.select().from(transacciones).orderBy(asc(transacciones.fecha));
+
+  const saldoPorCuenta = new Map<number, number>();
+  for (const c of cuentasLiquidas) saldoPorCuenta.set(c.id, c.saldoInicial);
+
+  function totalActual(): number {
+    let total = 0;
+    for (const v of saldoPorCuenta.values()) total += v;
+    return total;
+  }
+
+  const totalPorDia = new Map<string, number>();
+  for (const t of todasTx) {
+    let cambia = false;
+    if (idsLiquidas.has(t.cuentaId)) {
+      saldoPorCuenta.set(t.cuentaId, (saldoPorCuenta.get(t.cuentaId) ?? 0) + signo(t.tipo) * t.monto);
+      cambia = true;
+    }
+    if (t.cuentaDestinoId !== null && idsLiquidas.has(t.cuentaDestinoId)) {
+      saldoPorCuenta.set(t.cuentaDestinoId, (saldoPorCuenta.get(t.cuentaDestinoId) ?? 0) + t.monto);
+      cambia = true;
+    }
+    if (cambia) totalPorDia.set(t.fecha.slice(0, 10), totalActual());
+  }
+
+  if (totalPorDia.size === 0) return [];
+
+  const primerDia = [...totalPorDia.keys()].sort()[0];
+  const hoy = new Date().toISOString().slice(0, 10);
+
+  const serie: { fecha: string; valor: number }[] = [];
+  let ultimoValor = 0;
+  const cursor = new Date(`${primerDia}T00:00:00`);
+  const fin = new Date(`${hoy}T00:00:00`);
+  while (cursor <= fin) {
+    const diaStr = cursor.toISOString().slice(0, 10);
+    if (totalPorDia.has(diaStr)) ultimoValor = totalPorDia.get(diaStr)!;
+    serie.push({ fecha: diaStr, valor: ultimoValor });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return serie.slice(-dias);
+}
+
+/** Agrupa filas ya calculadas de presupuestoPorCategoria por bucket (fijos/inversion/ahorro/libre) — sin tocar la base. */
+export function agruparPorBucket(filas: FilaPresupuesto[]): Record<string, number> {
+  const totales: Record<string, number> = { fijos: 0, inversion: 0, ahorro: 0, libre: 0 };
+  for (const fila of filas) {
+    totales[fila.categoria.bucket] = (totales[fila.categoria.bucket] ?? 0) + fila.gasto;
+  }
+  return totales;
+}
+
+export interface CuotaActiva {
+  id: number;
+  comercio: string;
+  montoCuota: number;
+  cuotasPagadas: number;
+  totalCuotas: number;
+  tarjetaNombre: string;
+}
+
+export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMensual: number }> {
+  const filas = await db
+    .select({
+      id: comprasCuotas.id,
+      comercio: comprasCuotas.comercio,
+      montoCuota: comprasCuotas.montoCuota,
+      cuotasPagadas: comprasCuotas.cuotasPagadas,
+      totalCuotas: comprasCuotas.totalCuotas,
+      tarjetaNombre: tarjetas.nombre,
+    })
+    .from(comprasCuotas)
+    .leftJoin(tarjetas, eq(comprasCuotas.tarjetaId, tarjetas.id))
+    .where(lt(comprasCuotas.cuotasPagadas, comprasCuotas.totalCuotas));
+
+  const filasConNombre = filas.map((f) => ({ ...f, tarjetaNombre: f.tarjetaNombre ?? "—" }));
+  const totalMensual = filasConNombre.reduce((acc, f) => acc + f.montoCuota, 0);
+  return { filas: filasConNombre, totalMensual };
+}
+
+export interface DeudaPendiente {
+  cuenta: Cuenta;
+  saldo: number;
+  fechaVencimiento: string | null;
+}
+
+/** Deriva la deuda directo del saldo de las cuentas tipo tarjeta_credito — sin tabla de deudas separada. */
+export async function deudaPendiente(): Promise<DeudaPendiente[]> {
+  const tarjetasCredito = await db.select().from(cuentas).where(eq(cuentas.tipo, "tarjeta_credito"));
+  const resultado: DeudaPendiente[] = [];
+  for (const cuenta of tarjetasCredito) {
+    const saldo = await saldoCuenta(cuenta.id);
+    if (saldo >= 0) continue;
+    const tarjeta = await db.select().from(tarjetas).where(eq(tarjetas.cuentaId, cuenta.id)).get();
+    resultado.push({ cuenta, saldo: -saldo, fechaVencimiento: tarjeta?.fechaVencimiento ?? null });
+  }
+  return resultado;
+}
+
+export interface FondoEmergenciaInfo {
+  cuenta: Cuenta;
+  metaMeses: number;
+  saldoActual: number;
+  metaMonto: number;
+}
+
+export async function obtenerFondoEmergencia(): Promise<FondoEmergenciaInfo | null> {
+  const fila = await db.select().from(fondoEmergencia).orderBy(desc(fondoEmergencia.id)).limit(1).get();
+  if (!fila) return null;
+
+  const cuenta = await db.select().from(cuentas).where(eq(cuentas.id, fila.cuentaId)).get();
+  if (!cuenta) return null;
+
+  const saldoActual = await saldoCuenta(cuenta.id);
+  const mes = new Date().toISOString().slice(0, 7);
+  const { filas } = await presupuestoPorCategoria(mes);
+  const gastosFijos = agruparPorBucket(filas).fijos ?? 0;
+
+  return { cuenta, metaMeses: fila.metaMeses, saldoActual, metaMonto: fila.metaMeses * gastosFijos };
+}
+
+export async function configurarFondoEmergencia(input: { cuentaId: number; metaMeses: number }) {
+  const existente = await db.select().from(fondoEmergencia).orderBy(desc(fondoEmergencia.id)).limit(1).get();
+  if (existente) {
+    await db.update(fondoEmergencia).set(input).where(eq(fondoEmergencia.id, existente.id));
+  } else {
+    await db.insert(fondoEmergencia).values(input);
+  }
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { crearCuenta, alternarDestacada } from "@/db/queries";
+import { crearCuenta, alternarDestacada, configurarFondoEmergencia } from "@/db/queries";
 
 export async function crearCuentaAction(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -21,6 +21,19 @@ export async function crearCuentaAction(formData: FormData) {
 
 export async function alternarDestacadaAction(cuentaId: number, destacada: boolean) {
   await alternarDestacada(cuentaId, destacada);
+  revalidatePath("/cuentas");
+  revalidatePath("/");
+}
+
+export async function configurarFondoEmergenciaAction(formData: FormData) {
+  const cuentaId = parseInt(String(formData.get("cuentaId") ?? ""), 10);
+  const metaMeses = parseFloat(String(formData.get("metaMeses") ?? ""));
+
+  if (Number.isNaN(cuentaId) || Number.isNaN(metaMeses) || metaMeses <= 0) {
+    throw new Error("Datos de fondo de emergencia incompletos");
+  }
+
+  await configurarFondoEmergencia({ cuentaId, metaMeses });
   revalidatePath("/cuentas");
   revalidatePath("/");
 }

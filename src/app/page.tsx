@@ -1,11 +1,38 @@
 import Link from "next/link";
-import { listarCuentas, presupuestoPorCategoria, resumenMes, saldoCuenta, transaccionesDelMes } from "@/db/queries";
+import {
+  agruparPorBucket,
+  cuotasActivas,
+  deudaPendiente,
+  listarCategorias,
+  listarCuentas,
+  patrimonioHistorico,
+  presupuestoPorCategoria,
+  resumenMes,
+  saldoCuenta,
+  transaccionesDelMes,
+} from "@/db/queries";
 import { evaluarInsights } from "@/logic/insights";
 
 export const dynamic = "force-dynamic";
 
+const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const BUCKETS: { clave: string; nombre: string; color: string }[] = [
+  { clave: "fijos", nombre: "Costos fijos", color: "var(--ink)" },
+  { clave: "inversion", nombre: "Inversiones", color: "var(--accent)" },
+  { clave: "ahorro", nombre: "Ahorro", color: "var(--cat-3)" },
+  { clave: "libre", nombre: "Gasto libre", color: "var(--warn)" },
+];
+
 function mesActual(): string {
   return new Date().toISOString().slice(0, 7);
+}
+
+function estadoBarra(pct: number | null): "" | "warn" | "over" {
+  if (pct === null) return "";
+  if (pct >= 100) return "over";
+  if (pct >= 80) return "warn";
+  return "";
 }
 
 export default async function InicioPage() {
@@ -21,8 +48,58 @@ export default async function InicioPage() {
   const recientes = (await transaccionesDelMes(mes)).slice(0, 3);
   const { filas: presupuesto, sinCategorizar } = await presupuestoPorCategoria(mes);
   const insights = evaluarInsights({ presupuesto, sinCategorizar, resumen });
+  const categorias = await listarCategorias();
 
   const tasaAhorro = resumen.ingresos > 0 ? ((resumen.ingresos - resumen.gastos) / resumen.ingresos) * 100 : null;
+
+  // --- Patrimonio neto: reconstruido de las transacciones, sin snapshots ---
+  const patrimonio = await patrimonioHistorico(30);
+  let trendSvg: { puntos: string; poligono: string } | null = null;
+  let deltaPatrimonio: number | null = null;
+  if (patrimonio.length >= 3) {
+    const valores = patrimonio.map((p) => p.valor);
+    const min = Math.min(...valores);
+    const max = Math.max(...valores);
+    const rango = max - min || 1;
+    const ancho = 300;
+    const alto = 84;
+    const puntosArr = patrimonio.map((p, i) => {
+      const x = (i / (patrimonio.length - 1)) * ancho;
+      const y = alto - ((p.valor - min) / rango) * alto;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const puntos = puntosArr.join(" ");
+    trendSvg = { puntos, poligono: `0,${alto} ${puntos} ${ancho},${alto}` };
+    deltaPatrimonio = patrimonio[patrimonio.length - 1].valor - patrimonio[0].valor;
+  }
+
+  // --- Compromisos recurrentes ---
+  const { totalMensual: totalCuotas } = await cuotasActivas();
+  const deudas = await deudaPendiente();
+  const totalDeuda = deudas.reduce((acc, d) => acc + d.saldo, 0);
+
+  // --- Gasto por categoría (donut) ---
+  const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
+  const gastoPorCategoria = [...resumen.porCategoria.entries()]
+    .filter(([id, monto]) => id !== null && monto > 0)
+    .map(([id, monto]) => ({ categoria: categoriaPorId.get(id as number), monto }))
+    .filter((x): x is { categoria: NonNullable<typeof x.categoria>; monto: number } => !!x.categoria)
+    .sort((a, b) => b.monto - a.monto);
+  const totalCategorizado = gastoPorCategoria.reduce((acc, c) => acc + c.monto, 0);
+  const circunferencia = 2 * Math.PI * 54;
+  let acumulado = 0;
+  const arcos = gastoPorCategoria.map((c, i) => {
+    const arcLen = totalCategorizado > 0 ? (c.monto / totalCategorizado) * circunferencia : 0;
+    const arco = { ...c, arcLen, offset: -acumulado, color: `var(--cat-${(i % 6) + 1})` };
+    acumulado += arcLen;
+    return arco;
+  });
+
+  // --- Categorías a vigilar (mismo cálculo que Presupuesto, top 3) ---
+  const aVigilar = presupuesto.slice(0, 3);
+
+  // --- Plan de gasto consciente (solo montos reales, sin meta) ---
+  const porBucket = agruparPorBucket(presupuesto);
 
   return (
     <div className="screen">
@@ -47,6 +124,29 @@ export default async function InicioPage() {
             </p>
           )}
         </div>
+
+        {trendSvg && (
+          <div className="card hero-secondary">
+            <div className="top-row">
+              <div>
+                <div className="label">Patrimonio neto</div>
+                <div className="valor tabular">S/ {patrimonio[patrimonio.length - 1].valor.toFixed(2)}</div>
+                {deltaPatrimonio !== null && (
+                  <div className="delta tabular">
+                    {deltaPatrimonio >= 0 ? "+" : "−"}S/ {Math.abs(deltaPatrimonio).toFixed(2)} en {patrimonio.length} días
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="trend-wrap">
+              <svg viewBox="0 0 300 84" preserveAspectRatio="none">
+                <polygon points={trendSvg.poligono} fill="var(--accent-soft)" />
+                <polyline points={trendSvg.puntos} fill="none" stroke="var(--accent)" strokeWidth="2" />
+              </svg>
+            </div>
+            <div className="trend-axis">Últimos {patrimonio.length} días</div>
+          </div>
+        )}
       </div>
 
       {insights.length > 0 && (
@@ -81,6 +181,129 @@ export default async function InicioPage() {
           <div className="label">Movimientos</div>
           <div className="valor tabular">{resumen.total}</div>
         </div>
+      </div>
+
+      <div className="stats-label">Compromisos recurrentes</div>
+      <div className="commit-row">
+        <Link href="/presupuesto" className="commit-chip">
+          <div className="commit-icon" aria-hidden="true" />
+          <div className="commit-body">
+            <span className="commit-label">Suscripciones</span>
+            <span className="commit-val tabular">S/ 0.00</span>
+          </div>
+        </Link>
+        <Link href="/presupuesto" className="commit-chip">
+          <div className="commit-icon" aria-hidden="true" />
+          <div className="commit-body">
+            <span className="commit-label">Cuotas activas</span>
+            <span className="commit-val tabular">S/ {totalCuotas.toFixed(2)}</span>
+          </div>
+        </Link>
+        <Link href="/cuentas" className={`commit-chip${totalDeuda > 0 ? " warn" : ""}`}>
+          <div className="commit-icon" aria-hidden="true" />
+          <div className="commit-body">
+            <span className="commit-label">Deuda pendiente</span>
+            <span className="commit-val tabular">S/ {totalDeuda.toFixed(2)}</span>
+          </div>
+        </Link>
+      </div>
+
+      {gastoPorCategoria.length > 0 && (
+        <>
+          <div className="section-head">
+            <div className="section-title">Gasto por categoría</div>
+          </div>
+          <div className="card chart-card">
+            <div className="donut-row">
+              <svg viewBox="0 0 140 140" width="140" height="140">
+                <g transform="rotate(-90 70 70)">
+                  {arcos.map((a) => (
+                    <circle
+                      key={a.categoria.id}
+                      cx="70"
+                      cy="70"
+                      r="54"
+                      fill="none"
+                      stroke={a.color}
+                      strokeWidth="16"
+                      strokeDasharray={`${a.arcLen} ${circunferencia - a.arcLen}`}
+                      strokeDashoffset={a.offset}
+                    />
+                  ))}
+                </g>
+              </svg>
+              <div className="legend">
+                {arcos.map((a) => (
+                  <div className="legend-item" key={a.categoria.id}>
+                    <span className="legend-dot" style={{ background: a.color }} />
+                    <span className="nombre">{a.categoria.nombre}</span>
+                    <span className="pct">{totalCategorizado > 0 ? ((a.monto / totalCategorizado) * 100).toFixed(0) : 0}%</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {aVigilar.length > 0 && (
+        <>
+          <div className="section-head with-action">
+            <div className="section-title">Categorías a vigilar</div>
+            <Link href="/presupuesto" className="text-link">
+              Ver más
+            </Link>
+          </div>
+          <div className="card">
+            {aVigilar.map(({ categoria, gasto, pctUsado, sinMovimiento }) => {
+              const estado = estadoBarra(pctUsado);
+              return (
+                <div className={`cat-row${sinMovimiento ? " zero" : ""}`} key={categoria.id}>
+                  <div className="cat-top">
+                    <span>{categoria.nombre}</span>
+                    <span className="cifras">
+                      <strong className="tabular">S/ {FORMATO.format(gasto)}</strong>
+                      {categoria.limiteMensual ? ` / S/ ${FORMATO.format(categoria.limiteMensual)}` : ""}
+                    </span>
+                  </div>
+                  {!sinMovimiento && categoria.limiteMensual !== null && (
+                    <div className="cat-bar-track">
+                      <div className={`cat-bar-fill ${estado}`} style={{ width: `${Math.min(100, pctUsado ?? 0)}%` }} />
+                    </div>
+                  )}
+                  {estado === "over" && <div className="cat-flag over">Pasaste el límite este mes</div>}
+                  {estado === "warn" && <div className="cat-flag warn">Cerca del límite</div>}
+                  {sinMovimiento && <div className="cat-zero-note">Sin movimiento este mes</div>}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      <div className="section-head with-action">
+        <div className="section-title">Plan de gasto consciente</div>
+        <Link href="/presupuesto" className="text-link">
+          Ver más
+        </Link>
+      </div>
+      <div className="card">
+        {BUCKETS.map((b) => {
+          const monto = porBucket[b.clave] ?? 0;
+          const pct = resumen.gastos > 0 ? (monto / resumen.gastos) * 100 : 0;
+          return (
+            <div className="plan-row" key={b.clave}>
+              <span className="dot" style={{ background: b.color }} />
+              <div className="info">
+                <div className="nombre">{b.nombre}</div>
+                <div className="bar-track">
+                  <div className="bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: b.color }} />
+                </div>
+              </div>
+              <div className="pct tabular">S/ {FORMATO.format(monto)}</div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="section-head with-action">
