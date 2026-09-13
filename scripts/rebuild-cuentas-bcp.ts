@@ -16,18 +16,6 @@ const TARJETA_DEBITO_A_CUENTA: Record<string, string> = {
 };
 const TARJETA_CREDITO = "1305";
 
-function extraerDigitosOrigen(body: string): string | null {
-  const m =
-    body.match(/Desde\s+[^\n]+\n\*+\s*(\d{4})/i) ??
-    body.match(/Cuenta de origen:?\s*[^\n]+\n\*+\s*(\d{4})/i);
-  return m?.[1] ?? null;
-}
-
-function extraerDigitosDestino(body: string): string | null {
-  const m = body.match(/Enviado a\s+[^\n]+\n\*+\s*(\d{4})/i);
-  return m?.[1] ?? null;
-}
-
 // Compras a plazos activas, reportadas a mano por el usuario (no llegan por
 // correo como tal — el banco solo informa la cuota mensual en el estado de
 // cuenta). fechaCompra es aproximada cuando no se dio la fecha exacta.
@@ -52,7 +40,7 @@ const COMPRAS_CUOTAS_CONOCIDAS = [
 
 async function main() {
   const { db } = await import("../src/db/client");
-  const { cuentas, transacciones, tarjetas, comprasCuotas } = await import("../src/db/schema");
+  const { cuentas, transacciones, tarjetas, comprasCuotas, identificadoresCuenta } = await import("../src/db/schema");
   const { eq } = await import("drizzle-orm");
   const { bcpParser } = await import("../src/parsers/bcp");
   const { interbankParser } = await import("../src/parsers/interbank");
@@ -61,6 +49,7 @@ async function main() {
   const { categorizar } = await import("../src/categorizacion/reglas");
   const { categorias } = await import("../src/db/schema");
   const { TIPO_CAMBIO_USD_PEN } = await import("../src/config/moneda");
+  const { extraerDigitosOrigen, extraerDigitosDestino } = await import("../src/gmail/resolver-cuenta");
 
   const todasLasCategorias = await db.select().from(categorias);
   const categoriaIdPorNombre = new Map(todasLasCategorias.map((c) => [c.nombre, c.id]));
@@ -68,6 +57,7 @@ async function main() {
   console.log("Borrando transacciones, cuentas, tarjetas y cuotas existentes (recarga limpia)...");
   await db.delete(comprasCuotas);
   await db.delete(tarjetas);
+  await db.delete(identificadoresCuenta);
   await db.delete(transacciones);
   await db.delete(cuentas);
 
@@ -86,6 +76,10 @@ async function main() {
       })
       .returning();
     idPorDigitos[digitos] = nueva.id;
+    // El número de cuenta también identifica transacciones (correos de
+    // transferencia dicen "Cuenta de origen/destino **1051", no un número
+    // de tarjeta) — se registra igual que un identificador de tarjeta.
+    await db.insert(identificadoresCuenta).values({ cuentaId: nueva.id, ultimosDigitos: digitos });
   }
 
   const [cuentaInterbank] = await db
@@ -97,6 +91,16 @@ async function main() {
     .insert(cuentas)
     .values({ nombre: "Tarjeta de Crédito BCP", banco: "bcp", tipo: "tarjeta_credito", saldoInicial: 0, destacada: false })
     .returning();
+
+  // Identificadores de tarjeta (distintos de los de cuenta de arriba) para
+  // que el webhook en vivo resuelva la cuenta sin los objetos hardcodeados
+  // de este script.
+  for (const [digitosTarjeta, digitosCuenta] of Object.entries(TARJETA_DEBITO_A_CUENTA)) {
+    await db
+      .insert(identificadoresCuenta)
+      .values({ cuentaId: idPorDigitos[digitosCuenta], ultimosDigitos: digitosTarjeta });
+  }
+  await db.insert(identificadoresCuenta).values({ cuentaId: cuentaTarjetaBcp.id, ultimosDigitos: TARJETA_CREDITO });
 
   // Ciclo de facturación reportado por el usuario: cierre el 25, nuevo
   // ciclo el 26, pago el 18 del mes siguiente al cierre. fechaVencimiento

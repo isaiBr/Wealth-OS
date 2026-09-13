@@ -19,6 +19,26 @@ export const cuentas = sqliteTable("cuentas", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 
+// --- Identificadores de cuenta ---------------------------------------------
+// Resuelve "estos 4 dígitos que vienen en el correo" -> cuenta real. Separado
+// de `cuentas` porque una misma cuenta puede tener más de un identificador:
+// los últimos 4 dígitos de la cuenta (usados en correos de transferencia) Y
+// los últimos 4 dígitos de una tarjeta ligada a ella (usados en correos de
+// consumo) — son cadenas distintas apuntando al mismo lugar. Reemplaza el
+// mapeo que antes vivía hardcodeado en scripts/rebuild-cuentas-bcp.ts, para
+// que el webhook de Gmail en vivo (Fase 1) pueda resolver la cuenta sin
+// depender de ese script.
+export const identificadoresCuenta = sqliteTable(
+  "identificadores_cuenta",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    cuentaId: integer("cuenta_id").references(() => cuentas.id).notNull(),
+    ultimosDigitos: text("ultimos_digitos").notNull(),
+    createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+  },
+  (table) => [uniqueIndex("identificadores_cuenta_digitos_idx").on(table.ultimosDigitos)]
+);
+
 // --- Categorías ----------------------------------------------------------
 export const categorias = sqliteTable("categorias", {
   id: integer("id").primaryKey({ autoIncrement: true }),
@@ -92,4 +112,14 @@ export const comprasCuotas = sqliteTable("compras_cuotas", {
   cuotasPagadas: integer("cuotas_pagadas").notNull().default(0),
   fechaCompra: text("fecha_compra").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
+// --- Estado de sincronización de Gmail (Fase 1) ----------------------------
+// Fila única (id=1) con el historyId más reciente ya procesado — el webhook
+// lo usa para pedirle a la Gmail API solo lo nuevo desde la última vez
+// (users.history.list), en vez de reprocesar toda la bandeja.
+export const gmailSyncState = sqliteTable("gmail_sync_state", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  historyId: text("history_id").notNull(),
+  updatedAt: text("updated_at").notNull().default(sql`(current_timestamp)`),
 });
