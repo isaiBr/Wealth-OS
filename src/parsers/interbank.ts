@@ -19,9 +19,11 @@ const MESES: Record<string, number> = {
 };
 
 // Encabezados de sección conocidos en las "Constancia de ..." de Interbank.
-// El texto de estos correos viene de copiar la vista renderizada de Gmail
-// (no el HTML/MIME original), así que el layout es "label" en su propia
-// línea, seguido de 1+ líneas de valor, hasta el siguiente label conocido.
+// Dos formatos posibles para el mismo label, según de dónde vino el texto:
+// (a) "label" solo en su línea, valor en la(s) línea(s) de abajo — así se
+//     ve al copiar el correo renderizado a mano (correos-septiembre.ts).
+// (b) "label   valor" en la misma línea — así queda la tabla del correo
+//     real convertida de HTML a texto en vivo (ver src/gmail/mensaje.ts).
 const LABELS = [
   "código de operación",
   "fecha y hora",
@@ -35,15 +37,33 @@ const LABELS = [
   "app",
 ];
 
+/** true si la línea es un label conocido "solo" o "label + valor pegado". */
+function esLineaDeLabel(lineaLower: string): boolean {
+  return LABELS.some((l) => lineaLower === l || lineaLower.startsWith(l + " "));
+}
+
 function bloque(texto: string, label: string): string[] {
   const lineas = texto.split(/\r?\n/).map((l) => l.trim());
-  const idx = lineas.findIndex((l) => l.toLowerCase() === label.toLowerCase());
+  const labelLower = label.toLowerCase();
+
+  const idxSolo = lineas.findIndex((l) => l.toLowerCase() === labelLower);
+  const idx = idxSolo !== -1 ? idxSolo : lineas.findIndex((l) => l.toLowerCase().startsWith(labelLower + " "));
   if (idx === -1) return [];
+
   const out: string[] = [];
+  if (idx !== idxSolo) {
+    // Formato (b): lo que sigue al label en la misma línea es la primera
+    // línea de valor.
+    const restoLinea = lineas[idx].slice(label.length).trim();
+    if (restoLinea) out.push(restoLinea);
+  }
   for (let i = idx + 1; i < lineas.length; i++) {
     const linea = lineas[i];
     if (linea === "") continue;
-    if (LABELS.includes(linea.toLowerCase())) break;
+    // Corta tanto en "otro label solo" (formato a) como en "otro label +
+    // valor pegado" (formato b) — si no, el bloque se come el resto del
+    // correo completo.
+    if (esLineaDeLabel(linea.toLowerCase())) break;
     out.push(linea);
   }
   return out;
