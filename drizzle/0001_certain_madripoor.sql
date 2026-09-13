@@ -1,0 +1,1 @@
+ALTER TABLE `cuentas` ADD `destacada` integer DEFAULT false NOT NULL;

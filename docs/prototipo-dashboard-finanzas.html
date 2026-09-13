@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Finanzas — Prototipo</title>
+<style>
+  :root{
+    --bg:#F6F7F4;
+    --surface:#FFFFFF;
+    --border:#E3E6DF;
+    --ink:#16241E;
+    --ink-muted:#5B6760;
+    --accent:#2F6F5E;
+    --accent-soft:#E4EFEA;
+    --accent-light:#6FA593;
+    --warn:#B8823D;
+    --warn-soft:#F6ECDC;
+    --danger:#A6432F;
+    --danger-soft:#F5E4DF;
+    --serif: Georgia, 'Iowan Old Style', 'Times New Roman', serif;
+    --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  .page{
+    max-width:440px;
+    margin:0 auto;
+    padding:20px 16px 56px;
+  }
+  .topbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:16px;
+  }
+  .topbar .mes{font-size:13px;color:var(--ink-muted);}
+  .topbar .mes strong{color:var(--ink);}
+  .topbar .cuentas-count{font-size:12px;color:var(--ink-muted);}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:20px 18px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero-row{display:flex;flex-direction:column;gap:12px;margin-bottom:14px;}
+  .hero-primary{background:var(--ink);color:#fff;border:none;}
+  .hero-primary .label{font-size:12.5px;color:#B9C4BC;margin-bottom:6px;}
+  .hero-primary .valor{font-family:var(--serif);font-size:36px;line-height:1;}
+  .hero-primary .desglose{margin-top:12px;font-size:12px;color:#9FAEA5;line-height:1.6;}
+  .hero-primary .desglose b{color:#DCE6E0;font-weight:500;}
+
+  .hero-secondary .label{font-size:12.5px;color:var(--ink-muted);margin-bottom:6px;}
+  .hero-secondary .top-row{display:flex;justify-content:space-between;align-items:flex-end;}
+  .hero-secondary .valor{font-family:var(--serif);font-size:26px;}
+  .hero-secondary .delta{font-size:12px;color:var(--accent);margin-top:4px;}
+  .hero-secondary .chart-wrap{margin-top:10px;}
+
+  /* ---------- insights ---------- */
+  .insights-row{
+    display:flex;
+    gap:10px;
+    overflow-x:auto;
+    padding-bottom:2px;
+    margin-bottom:18px;
+  }
+  .insight{
+    flex:0 0 auto;
+    min-width:220px;
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:13px 14px;
+    font-size:12.5px;
+    line-height:1.45;
+  }
+  .insight .tag{
+    display:inline-block;
+    font-size:10.5px;
+    font-weight:600;
+    padding:2px 7px;
+    border-radius:5px;
+    margin-bottom:7px;
+  }
+  .insight.warn .tag{background:var(--warn-soft);color:var(--warn);}
+  .insight.good .tag{background:var(--accent-soft);color:var(--accent);}
+  .insight.info .tag{background:var(--border);color:var(--ink-muted);}
+
+  /* ---------- stats ---------- */
+  .stats-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+    margin-bottom:18px;
+  }
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px;}
+  .stat .label{font-size:12px;color:var(--ink-muted);margin-bottom:4px;}
+  .stat .valor{font-family:var(--serif);font-size:21px;}
+  .stat .delta{font-size:11px;margin-top:4px;}
+  .stat .delta.up-good{color:var(--accent);}
+  .stat .delta.up-warn{color:var(--warn);}
+  .stat .delta.flat{color:var(--ink-muted);}
+
+  .section-title{font-size:15px;font-weight:600;margin:26px 0 4px;}
+  .section-sub{font-size:12.5px;color:var(--ink-muted);margin-bottom:12px;}
+
+  /* ---------- charts ---------- */
+  .chart-card{margin-bottom:18px;}
+  .donut-row{display:flex;flex-wrap:wrap;align-items:center;gap:18px;}
+  .legend{flex:1;min-width:160px;display:flex;flex-direction:column;gap:8px;}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+  .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .legend-item .nombre{flex:1;color:var(--ink);}
+  .legend-item .pct{color:var(--ink-muted);font-size:11.5px;}
+
+  /* ---------- plan de gasto consciente ---------- */
+  .plan-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .plan-row:last-child{border-bottom:none;}
+  .plan-row .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .plan-row .info{flex:1;min-width:0;}
+  .plan-row .nombre{font-size:13.5px;}
+  .plan-row .meta{font-size:11.5px;color:var(--ink-muted);}
+  .plan-row .pct{font-family:var(--serif);font-size:16px;flex-shrink:0;}
+  .plan-row .bar-track{height:5px;background:var(--border);border-radius:3px;margin-top:6px;overflow:hidden;}
+  .plan-row .bar-fill{height:100%;border-radius:3px;}
+
+  /* ---------- categorías ---------- */
+  .cat-row{padding:11px 0;border-bottom:1px solid var(--border);}
+  .cat-row:last-child{border-bottom:none;}
+  .cat-top{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:6px;}
+  .cat-top .cifras{color:var(--ink-muted);font-size:12.5px;}
+  .cat-top .cifras strong{color:var(--ink);font-weight:600;}
+  .cat-bar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .cat-bar-fill{height:100%;border-radius:3px;background:var(--accent);}
+  .cat-bar-fill.warn{background:var(--warn);}
+  .cat-bar-fill.over{background:var(--danger);}
+  .cat-flag{font-size:11px;margin-top:4px;}
+  .cat-flag.warn{color:var(--warn);}
+  .cat-flag.over{color:var(--danger);}
+
+  /* ---------- cuentas ---------- */
+  .cuentas{display:flex;flex-direction:column;gap:8px;}
+  .cuenta{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 14px;}
+  .cuenta .banco{display:flex;align-items:center;gap:10px;}
+  .banco-tag{font-size:10.5px;font-weight:600;color:#fff;padding:3px 7px;border-radius:5px;letter-spacing:0.01em;}
+  .tag-bcp{background:#0A5C36;}
+  .tag-ibk{background:#00558C;}
+  .tag-pic{background:#FFC20E;color:#3A2E00;}
+  .cuenta .nombre-cuenta{font-size:13px;color:var(--ink-muted);}
+  .cuenta .saldo{font-family:var(--serif);font-size:16px;}
+
+  /* ---------- transacciones ---------- */
+  .tx{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);}
+  .tx:last-child{border-bottom:none;}
+  .tx.transfer{opacity:0.55;}
+  .tx-left{display:flex;align-items:center;gap:10px;min-width:0;}
+  .tx-info{min-width:0;}
+  .tx-merchant{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tx-meta{font-size:11.5px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;margin-top:2px;flex-wrap:wrap;}
+  .tx-cat-pill{background:var(--accent-soft);color:var(--accent);font-size:10.5px;padding:2px 6px;border-radius:5px;}
+  .tx-cat-pill.transfer{background:var(--border);color:var(--ink-muted);}
+  .tx-amount{font-family:var(--serif);font-size:14.5px;flex-shrink:0;padding-left:10px;}
+
+  /* ---------- suscripciones ---------- */
+  .sub-row{display:flex;justify-content:space-between;font-size:13px;padding:9px 0;border-bottom:1px solid var(--border);}
+  .sub-row:last-child{border-bottom:none;}
+  .sub-row .precio{color:var(--ink-muted);}
+
+  /* ---------- meta / fondo emergencia ---------- */
+  .meta-top{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:8px;}
+  .meta-top .cifras{color:var(--ink-muted);}
+  .meta-bar-track{height:8px;background:var(--border);border-radius:4px;overflow:hidden;}
+  .meta-bar-fill{height:100%;background:var(--accent);border-radius:4px;}
+  .meta-note{font-size:11.5px;color:var(--ink-muted);margin-top:8px;}
+
+  .add-manual{margin-top:22px;display:flex;align-items:center;justify-content:center;gap:8px;border:1px dashed var(--border);border-radius:10px;padding:12px;font-size:13px;color:var(--ink-muted);}
+
+  .col-main > .section-title:first-child{margin-top:0;}
+
+  /* ================= DESKTOP ================= */
+  @media (min-width:900px){
+    .page{max-width:1120px;padding:36px 44px 72px;}
+    .topbar{margin-bottom:22px;}
+    .hero-row{flex-direction:row;gap:16px;margin-bottom:18px;}
+    .hero-primary{flex:1.1;}
+    .hero-secondary{flex:1;}
+    .insights-row{overflow-x:visible;display:grid;grid-template-columns:repeat(3,1fr);margin-bottom:24px;}
+    .insight{min-width:0;}
+    .dashboard-grid{display:grid;grid-template-columns:2fr 1fr;gap:22px;align-items:start;}
+    .col-side{display:flex;flex-direction:column;gap:0;}
+    .stats-grid{grid-template-columns:repeat(4,1fr);}
+    .donut-row{flex-wrap:nowrap;}
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="topbar">
+    <div class="mes">Resumen de <strong>septiembre 2026</strong></div>
+    <div class="cuentas-count">3 cuentas conectadas</div>
+  </div>
+
+  <div class="hero-row">
+    <div class="card hero-primary">
+      <div class="label">Disponible real hoy</div>
+      <div class="valor">S/ 3,180</div>
+      <div class="desglose">
+        <b>S/ 5,650</b> en cuentas líquidas<br>
+        − S/ 1,800 fijos pendientes (alquiler)<br>
+        − S/ 670 apartado para tu meta de ahorro
+      </div>
+    </div>
+    <div class="card hero-secondary">
+      <div class="top-row">
+        <div>
+          <div class="label">Patrimonio neto</div>
+          <div class="valor">S/ 42,300</div>
+        </div>
+      </div>
+      <div class="delta">+ S/ 1,150 vs. agosto</div>
+      <div class="chart-wrap">
+        <svg viewBox="0 0 300 92" width="100%" height="80" preserveAspectRatio="none">
+          <defs>
+            <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#2F6F5E" stop-opacity="0.22"/>
+              <stop offset="100%" stop-color="#2F6F5E" stop-opacity="0"/>
+            </linearGradient>
+          </defs>
+          <polygon points="10,80 66,63.5 122,45.6 178,36.7 234,24.6 290,10 290,90 10,90" fill="url(#areaFill)"/>
+          <polyline points="10,80 66,63.5 122,45.6 178,36.7 234,24.6 290,10" fill="none" stroke="#2F6F5E" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="290" cy="10" r="4" fill="#2F6F5E"/>
+          <text x="10" y="90" font-size="9" fill="#5B6760" font-family="-apple-system,sans-serif">Abr</text>
+          <text x="280" y="90" font-size="9" fill="#5B6760" font-family="-apple-system,sans-serif">Sep</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="insights-row">
+    <div class="insight warn">
+      <span class="tag">Atención</span>
+      Restaurantes y delivery subió 19% vs. agosto — ya superaste el presupuesto del mes.
+    </div>
+    <div class="insight good">
+      <span class="tag">Buena señal</span>
+      Tu tasa de ahorro subió de 24% a 27% este mes.
+    </div>
+    <div class="insight info">
+      <span class="tag">Proyección</span>
+      Al ritmo actual, tu fondo de emergencia estará listo en ~5 meses.
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <div class="col-main">
+
+      <div class="stats-grid">
+        <div class="stat">
+          <div class="label">Ingreso del mes</div>
+          <div class="valor">S/ 8,500</div>
+          <div class="delta up-good">+ S/ 300 vs. agosto</div>
+        </div>
+        <div class="stat">
+          <div class="label">Gasto real</div>
+          <div class="valor">S/ 5,200</div>
+          <div class="delta up-warn">+ S/ 480 vs. agosto</div>
+        </div>
+        <div class="stat">
+          <div class="label">Tasa de ahorro</div>
+          <div class="valor">27%</div>
+          <div class="delta up-good">+ 3 pts vs. agosto</div>
+        </div>
+        <div class="stat">
+          <div class="label">Gastos fijos</div>
+          <div class="valor">54%</div>
+          <div class="delta flat">+ 1 pt vs. agosto</div>
+        </div>
+      </div>
+
+      <div class="section-title">Gasto por categoría</div>
+      <div class="section-sub">S/ 5,200 en total este mes</div>
+      <div class="card chart-card">
+        <div class="donut-row">
+          <svg viewBox="0 0 140 140" width="140" height="140" style="flex-shrink:0;">
+            <g transform="rotate(-90 70 70)">
+              <circle cx="70" cy="70" r="54" fill="none" stroke="#16241E" stroke-width="18" stroke-dasharray="117.4 221.9" stroke-dashoffset="0"/>
+              <circle cx="70" cy="70" r="54" fill="none" stroke="#B8823D" stroke-width="18" stroke-dasharray="45.8 293.5" stroke-dashoffset="-117.4"/>
+              <circle cx="70" cy="70" r="54" fill="none" stroke="#2F6F5E" stroke-width="18" stroke-dasharray="40.4 298.9" stroke-dashoffset="-163.2"/>
+              <circle cx="70" cy="70" r="54" fill="none" stroke="#A6432F" stroke-width="18" stroke-dasharray="26.8 312.5" stroke-dashoffset="-203.6"/>
+              <circle cx="70" cy="70" r="54" fill="none" stroke="#6FA593" stroke-width="18" stroke-dasharray="18.3 321" stroke-dashoffset="-230.4"/>
+              <circle cx="70" cy="70" r="54" fill="none" stroke="#C7CCC3" stroke-width="18" stroke-dasharray="90.6 248.7" stroke-dashoffset="-248.7"/>
+            </g>
+          </svg>
+          <div class="legend">
+            <div class="legend-item"><span class="legend-dot" style="background:#16241E;"></span><span class="nombre">Vivienda</span><span class="pct">35% · S/ 1,800</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#B8823D;"></span><span class="nombre">Compras personales</span><span class="pct">13% · S/ 700</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#2F6F5E;"></span><span class="nombre">Alimentación</span><span class="pct">12% · S/ 620</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#A6432F;"></span><span class="nombre">Restaurantes</span><span class="pct">8% · S/ 410</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#6FA593;"></span><span class="nombre">Transporte</span><span class="pct">5% · S/ 280</span></div>
+            <div class="legend-item"><span class="legend-dot" style="background:#C7CCC3;"></span><span class="nombre">Otros</span><span class="pct">27% · S/ 1,390</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Plan de gasto consciente</div>
+      <div class="section-sub">Cómo se reparte tu ingreso por grandes bloques</div>
+      <div class="card">
+        <div class="plan-row">
+          <span class="dot" style="background:var(--ink);"></span>
+          <div class="info">
+            <div class="nombre">Costos fijos</div>
+            <div class="meta">Vivienda, servicios, deudas · meta 50–60%</div>
+            <div class="bar-track"><div class="bar-fill" style="width:54%;background:var(--ink);"></div></div>
+          </div>
+          <div class="pct">54%</div>
+        </div>
+        <div class="plan-row">
+          <span class="dot" style="background:var(--accent);"></span>
+          <div class="info">
+            <div class="nombre">Inversiones</div>
+            <div class="meta">Aportes de inversión · meta 10%</div>
+            <div class="bar-track"><div class="bar-fill" style="width:9%;background:var(--accent);"></div></div>
+          </div>
+          <div class="pct">9%</div>
+        </div>
+        <div class="plan-row">
+          <span class="dot" style="background:#4C7A6B;"></span>
+          <div class="info">
+            <div class="nombre">Ahorro</div>
+            <div class="meta">Fondo de emergencia y metas · meta 10%</div>
+            <div class="bar-track"><div class="bar-fill" style="width:18%;background:#4C7A6B;"></div></div>
+          </div>
+          <div class="pct">18%</div>
+        </div>
+        <div class="plan-row">
+          <span class="dot" style="background:var(--warn);"></span>
+          <div class="info">
+            <div class="nombre">Gasto libre</div>
+            <div class="meta">Sin culpa: salidas, gustos, hobbies · meta 20–35%</div>
+            <div class="bar-track"><div class="bar-fill" style="width:19%;background:var(--warn);"></div></div>
+          </div>
+          <div class="pct">19%</div>
+        </div>
+      </div>
+
+      <div class="section-title">Presupuesto por categoría</div>
+      <div class="section-sub">Solo las que tienen movimiento este mes</div>
+      <div class="card">
+        <div class="cat-row">
+          <div class="cat-top"><span class="nombre">Alimentación</span><span class="cifras"><strong>S/ 620</strong> / 700</span></div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" style="width:88%;"></div></div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-top"><span class="nombre">Restaurantes y delivery</span><span class="cifras"><strong>S/ 410</strong> / 350</span></div>
+          <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+          <div class="cat-flag over">S/ 60 sobre el presupuesto</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-top"><span class="nombre">Transporte</span><span class="cifras"><strong>S/ 280</strong> / 400</span></div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" style="width:70%;"></div></div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-top"><span class="nombre">Servicios</span><span class="cifras"><strong>S/ 340</strong> / 350</span></div>
+          <div class="cat-bar-track"><div class="cat-bar-fill warn" style="width:97%;"></div></div>
+          <div class="cat-flag warn">a punto de completarse</div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-top"><span class="nombre">Suscripciones</span><span class="cifras"><strong>S/ 95</strong> / 100</span></div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" style="width:95%;"></div></div>
+        </div>
+        <div class="cat-row">
+          <div class="cat-top"><span class="nombre">Entretenimiento</span><span class="cifras"><strong>S/ 150</strong> / 250</span></div>
+          <div class="cat-bar-track"><div class="cat-bar-fill" style="width:60%;"></div></div>
+        </div>
+      </div>
+
+      <div class="section-title">Movimientos recientes</div>
+      <div class="card" style="padding:6px 18px;">
+        <div class="tx">
+          <div class="tx-left">
+            <div class="tx-info">
+              <div class="tx-merchant">Tottus San Isidro</div>
+              <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> hoy, 6:40 pm <span class="tx-cat-pill">Alimentación</span></div>
+            </div>
+          </div>
+          <div class="tx-amount">− S/ 84.30</div>
+        </div>
+        <div class="tx">
+          <div class="tx-left">
+            <div class="tx-info">
+              <div class="tx-merchant">Rappi *Delivery</div>
+              <div class="tx-meta"><span class="banco-tag tag-ibk" style="font-size:9px;">IBK</span> hoy, 1:15 pm <span class="tx-cat-pill">Restaurantes</span></div>
+            </div>
+          </div>
+          <div class="tx-amount">− S/ 46.90</div>
+        </div>
+        <div class="tx transfer">
+          <div class="tx-left">
+            <div class="tx-info">
+              <div class="tx-merchant">A cuenta Interbank propia</div>
+              <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> ayer, 9:02 am <span class="tx-cat-pill transfer">Transferencia interna</span></div>
+            </div>
+          </div>
+          <div class="tx-amount">S/ 500.00</div>
+        </div>
+        <div class="tx">
+          <div class="tx-left">
+            <div class="tx-info">
+              <div class="tx-merchant">Cineplanet</div>
+              <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> ayer, 7:50 pm <span class="tx-cat-pill">Entretenimiento</span></div>
+            </div>
+          </div>
+          <div class="tx-amount">− S/ 38.00</div>
+        </div>
+        <div class="tx">
+          <div class="tx-left">
+            <div class="tx-info">
+              <div class="tx-merchant">Luz del Sur</div>
+              <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 10 sep <span class="tx-cat-pill">Servicios</span></div>
+            </div>
+          </div>
+          <div class="tx-amount">− S/ 112.40</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="col-side">
+      <div class="section-title">Cuentas</div>
+      <div class="cuentas">
+        <div class="cuenta">
+          <div class="banco"><span class="banco-tag tag-bcp">BCP</span><span class="nombre-cuenta">Cuenta sueldo</span></div>
+          <div class="saldo">S/ 3,200</div>
+        </div>
+        <div class="cuenta">
+          <div class="banco"><span class="banco-tag tag-bcp">BCP</span><span class="nombre-cuenta">Ahorros</span></div>
+          <div class="saldo">S/ 12,400</div>
+        </div>
+        <div class="cuenta">
+          <div class="banco"><span class="banco-tag tag-ibk">IBK</span><span class="nombre-cuenta">Cuenta corriente</span></div>
+          <div class="saldo">S/ 2,100</div>
+        </div>
+        <div class="cuenta">
+          <div class="banco"><span class="banco-tag tag-pic">Pichincha</span><span class="nombre-cuenta">Ahorros</span></div>
+          <div class="saldo">S/ 350</div>
+        </div>
+      </div>
+
+      <div class="section-title">Fondo de emergencia</div>
+      <div class="card meta-top-wrap" style="padding:16px 18px;">
+        <div class="meta-top">
+          <span>Meta: 3 meses de gastos fijos</span>
+          <span class="cifras">S/ 9,000 / S/ 15,000</span>
+        </div>
+        <div class="meta-bar-track"><div class="meta-bar-fill" style="width:60%;"></div></div>
+        <div class="meta-note">60% completado · a este ritmo, listo en ~5 meses</div>
+      </div>
+
+      <div class="section-title">Suscripciones</div>
+      <div class="section-sub">S/ 95 al mes en total</div>
+      <div class="card" style="padding:8px 18px;">
+        <div class="sub-row"><span class="nombre">Netflix</span><span class="precio">S/ 34.90</span></div>
+        <div class="sub-row"><span class="nombre">Spotify</span><span class="precio">S/ 19.90</span></div>
+        <div class="sub-row"><span class="nombre">Gimnasio</span><span class="precio">S/ 40.00</span></div>
+      </div>
+
+      <div class="add-manual">+ Agregar gasto manual</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1435 @@
+<title>Wealth OS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,380..680&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+  :root{
+    --bg:#F4F6EF;
+    --surface:#FFFFFF;
+    --surface-sunken:#ECEFE5;
+    --border:#DEE3D5;
+    --ink:#16211B;
+    --ink-muted:#5C685D;
+    --ink-faint:#8B9689;
+    --accent:#12805E;
+    --accent-strong:#0B5C42;
+    --accent-soft:#DCEEE3;
+    --warn:#93650F;
+    --warn-soft:#F2E4C7;
+    --danger:#A6432F;
+    --danger-soft:#F4E1D8;
+    --hero-bg:#16211B;
+    --hero-ink:#FFFFFF;
+    --hero-muted:#98A99C;
+    --hero-accent:#6FCBA3;
+
+    --cat-1:#12805E;
+    --cat-2:#C1622B;
+    --cat-3:#2F63B0;
+    --cat-4:#9C3B6B;
+    --cat-5:#B98A1E;
+    --cat-6:#7D519E;
+
+    --shadow-card:0 1px 2px rgba(22,33,27,0.04), 0 1px 1px rgba(22,33,27,0.03);
+    --radius-sm:10px;
+    --radius-md:14px;
+    --radius-lg:22px;
+
+    --serif:'Fraunces', Georgia, serif;
+    --sans:'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+    color-scheme:light;
+  }
+
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#11150F;
+      --surface:#1A2118;
+      --surface-sunken:#232B20;
+      --border:#333D2F;
+      --ink:#EDEFE7;
+      --ink-muted:#A7B2A2;
+      --ink-faint:#748073;
+      --accent:#3DAE85;
+      --accent-strong:#58C79B;
+      --accent-soft:#20362B;
+      --warn:#D2A23C;
+      --warn-soft:#3A3018;
+      --danger:#E0715A;
+      --danger-soft:#3D251E;
+      --hero-bg:#0D120D;
+      --hero-ink:#F3F6EF;
+      --hero-muted:#7E8F82;
+      --hero-accent:#4FBB8E;
+
+      --cat-1:#219873;
+      --cat-2:#CE7440;
+      --cat-3:#5680C7;
+      --cat-4:#C36B93;
+      --cat-5:#A67D2E;
+      --cat-6:#A67BC4;
+
+      --shadow-card:0 1px 2px rgba(0,0,0,0.25);
+      color-scheme:dark;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#11150F;
+    --surface:#1A2118;
+    --surface-sunken:#232B20;
+    --border:#333D2F;
+    --ink:#EDEFE7;
+    --ink-muted:#A7B2A2;
+    --ink-faint:#748073;
+    --accent:#3DAE85;
+    --accent-strong:#58C79B;
+    --accent-soft:#20362B;
+    --warn:#D2A23C;
+    --warn-soft:#3A3018;
+    --danger:#E0715A;
+    --danger-soft:#3D251E;
+    --hero-bg:#0D120D;
+    --hero-ink:#F3F6EF;
+    --hero-muted:#7E8F82;
+    --hero-accent:#4FBB8E;
+
+    --cat-1:#219873;
+    --cat-2:#CE7440;
+    --cat-3:#5680C7;
+    --cat-4:#C36B93;
+    --cat-5:#A67D2E;
+    --cat-6:#A67BC4;
+
+    --shadow-card:0 1px 2px rgba(0,0,0,0.25);
+    color-scheme:dark;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased;
+  }
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
+  button{font-family:inherit;}
+  h1,h2,h3{text-wrap:balance;}
+  .tabular{font-variant-numeric:tabular-nums;}
+
+  .page{
+    max-width:460px;
+    margin:0 auto;
+    padding:18px 16px calc(88px + env(safe-area-inset-bottom));
+  }
+
+  /* ---------- screens ---------- */
+  .screen-head{margin-bottom:18px;}
+  .screen-head .screen-title{font-family:var(--serif);font-optical-sizing:auto;font-weight:520;font-size:23px;line-height:1.15;}
+  .screen-head .screen-sub{font-size:12.5px;color:var(--ink-muted);margin-top:5px;line-height:1.5;}
+
+  /* ---------- bottom nav (mobile) ---------- */
+  .bottom-nav{
+    position:fixed;left:0;right:0;bottom:0;z-index:20;
+    display:flex;justify-content:space-around;
+    background:var(--surface);border-top:1px solid var(--border);
+    padding:8px 6px calc(8px + env(safe-area-inset-bottom));
+  }
+  .bottom-nav button{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+    background:none;border:none;color:var(--ink-faint);font-size:10.5px;
+    padding:4px 2px;cursor:pointer;border-radius:8px;
+  }
+  .bottom-nav button svg{width:20px;height:20px;}
+  .bottom-nav button.active{color:var(--accent-strong);font-weight:600;}
+  .bottom-nav button:hover{background:var(--surface-sunken);}
+
+  /* ---------- top nav (desktop) ---------- */
+  .top-nav{display:none;}
+
+  /* ---------- topbar ---------- */
+  .topbar{display:flex;flex-direction:column;gap:10px;margin-bottom:18px;}
+  .topbar-row{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+  .brand{display:flex;align-items:baseline;gap:8px;}
+  .brand-mark{font-family:var(--serif);font-weight:560;font-size:17px;letter-spacing:0.01em;}
+  .brand-example{font-size:11px;color:var(--ink-faint);}
+  .month-nav{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-muted);}
+  .month-nav button{
+    width:26px;height:26px;border-radius:50%;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink-muted);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;
+  }
+  .month-nav button:hover{background:var(--surface-sunken);}
+  .sync-pill{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:11.5px;color:var(--ink-muted);
+    background:var(--surface);border:1px solid var(--border);
+    padding:5px 10px 5px 8px;border-radius:20px;align-self:flex-start;
+  }
+  .sync-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 2.2s ease-in-out infinite;}
+  @media (prefers-reduced-motion: reduce){.sync-dot{animation:none;}}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+
+  .icon-btn{
+    width:32px;height:32px;border-radius:50%;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink-muted);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;transition:background .15s;flex-shrink:0;
+  }
+  .icon-btn:hover{background:var(--surface-sunken);}
+  .icon-btn svg{width:16px;height:16px;}
+  .topbar-actions{display:flex;align-items:center;gap:8px;}
+
+  /* ---------- selects (mes / filtro) ---------- */
+  .select-wrap{position:relative;display:inline-flex;align-items:center;}
+  .select-wrap svg{position:absolute;right:6px;width:11px;height:11px;color:var(--ink-muted);pointer-events:none;}
+  .month-select{
+    appearance:none;-webkit-appearance:none;-moz-appearance:none;
+    background:none;border:none;font-family:inherit;cursor:pointer;
+    color:var(--ink);font-weight:600;font-size:13px;text-align:center;
+    min-width:118px;padding:2px 16px 2px 2px;
+  }
+  .filter-select-wrap{
+    display:inline-flex;align-items:center;position:relative;
+    border:1px solid var(--border);background:var(--surface);border-radius:10px;
+    padding:0 26px 0 12px;
+  }
+  .filter-select-wrap select{
+    appearance:none;-webkit-appearance:none;-moz-appearance:none;
+    background:none;border:none;font-family:inherit;cursor:pointer;
+    color:var(--ink);font-size:13px;padding:9px 4px 9px 0;
+  }
+  .filter-select-wrap svg{position:absolute;right:10px;width:11px;height:11px;color:var(--ink-muted);pointer-events:none;}
+
+  .toolbar-row{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
+  .btn-add{
+    border:1px dashed var(--border);background:none;color:var(--ink-muted);
+    font-size:12.5px;font-weight:600;padding:9px 14px;border-radius:20px;cursor:pointer;
+    white-space:nowrap;transition:background .15s,border-color .15s;
+  }
+  .btn-add:hover{background:var(--surface);border-color:var(--ink-faint);}
+
+  .card{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:var(--radius-md);
+    box-shadow:var(--shadow-card);
+    padding:18px 17px;
+  }
+
+  /* ---------- hero ---------- */
+  .hero-row{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;}
+  .hero-primary{background:var(--hero-bg);color:var(--hero-ink);border:none;box-shadow:none;}
+  .hero-eyebrow{font-size:11px;color:var(--hero-muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px;}
+  .hero-primary .label{font-size:13px;color:var(--hero-muted);margin-bottom:6px;}
+  .hero-primary .valor{font-family:var(--serif);font-optical-sizing:auto;font-weight:520;font-size:38px;line-height:1;}
+  .hero-primary .desglose{margin-top:14px;font-size:12.5px;color:var(--hero-muted);line-height:1.7;border-top:1px solid rgba(255,255,255,0.12);padding-top:12px;}
+  .hero-primary .desglose .row{display:flex;justify-content:space-between;gap:12px;}
+  .hero-primary .desglose b{color:var(--hero-ink);font-weight:500;}
+
+  .hero-secondary .top-row{display:flex;justify-content:space-between;align-items:flex-start;}
+  .hero-secondary .label{font-size:13px;color:var(--ink-muted);margin-bottom:6px;}
+  .hero-secondary .valor{font-family:var(--serif);font-optical-sizing:auto;font-weight:520;font-size:27px;}
+  .hero-secondary .delta{font-size:12px;color:var(--accent);margin-top:4px;}
+  .range-toggle{display:flex;gap:4px;background:var(--surface-sunken);border-radius:8px;padding:3px;}
+  .range-toggle button{
+    border:none;background:none;color:var(--ink-muted);font-size:11px;font-weight:600;
+    padding:5px 8px;border-radius:6px;cursor:pointer;transition:background .15s,color .15s;
+  }
+  .range-toggle button.active{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,0.06);}
+  .trend-wrap{margin-top:12px;position:relative;}
+  .trend-wrap svg{display:block;width:100%;height:84px;overflow:visible;}
+  .trend-tooltip{
+    position:absolute;top:-6px;transform:translate(-50%,-100%);
+    background:var(--ink);color:var(--bg);font-size:11px;line-height:1.4;
+    padding:5px 8px;border-radius:7px;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .1s;z-index:2;
+  }
+  .trend-tooltip.show{opacity:1;}
+  .trend-tooltip b{font-variant-numeric:tabular-nums;}
+  .trend-axis{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink-faint);margin-top:4px;}
+
+  /* ---------- insights (consolidado: icono + número + texto corto/largo) ---------- */
+  .insights-row{
+    display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px;
+  }
+  .insight{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:13px 14px;display:flex;gap:10px;align-items:flex-start;
+  }
+  .insight-icon{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .insight-icon svg{width:15px;height:15px;}
+  .insight.warn .insight-icon{background:var(--warn-soft);color:var(--warn);}
+  .insight.good .insight-icon{background:var(--accent-soft);color:var(--accent-strong);}
+  .insight.info .insight-icon{background:var(--surface-sunken);color:var(--ink-muted);}
+  .insight-body{min-width:0;}
+  .insight-eyebrow{font-size:9.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;opacity:.85;}
+  .insight.warn .insight-eyebrow{color:var(--warn);}
+  .insight.good .insight-eyebrow{color:var(--accent-strong);}
+  .insight.info .insight-eyebrow{color:var(--ink-faint);}
+  .insight-num{font-family:var(--serif);font-optical-sizing:auto;font-size:19px;line-height:1.25;margin-top:1px;}
+  .insight-label{font-size:11px;color:var(--ink-muted);line-height:1.4;margin-top:2px;}
+  .insight-label .long{display:none;}
+
+  /* ---------- stats ---------- */
+  .stats-label{font-size:11px;font-weight:700;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.05em;margin:2px 0 9px;}
+  .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px;}
+  .stat{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px;}
+  .stat .label{font-size:12px;color:var(--ink-muted);margin-bottom:4px;}
+  .stat .valor{font-family:var(--serif);font-optical-sizing:auto;font-weight:520;font-size:22px;}
+  .stat .delta{font-size:11px;margin-top:4px;}
+  .stat .delta.up-good{color:var(--accent-strong);}
+  .stat .delta.up-warn{color:var(--warn);}
+  .stat .delta.flat{color:var(--ink-muted);}
+  .spark{display:flex;align-items:flex-end;gap:3px;height:20px;margin-top:9px;}
+  .spark i{flex:1;background:var(--surface-sunken);border-radius:2px;display:block;}
+  .spark i.now{background:var(--accent);}
+
+  /* ---------- compromisos recurrentes (home) ---------- */
+  .commit-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:24px;}
+  .commit-chip{
+    background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);
+    padding:12px 13px;text-align:left;cursor:pointer;transition:background .15s;
+    display:flex;align-items:center;gap:10px;
+  }
+  .commit-chip:hover{background:var(--surface-sunken);}
+  .commit-icon{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:var(--surface-sunken);color:var(--ink-muted);}
+  .commit-icon svg{width:14px;height:14px;}
+  .commit-chip.warn .commit-icon{background:var(--warn-soft);color:var(--warn);}
+  .commit-body{min-width:0;}
+  .commit-label{display:block;font-size:10.5px;color:var(--ink-muted);margin-bottom:2px;line-height:1.3;}
+  .commit-val{display:block;font-family:var(--serif);font-optical-sizing:auto;font-size:15px;line-height:1.2;}
+
+  .section-head{margin:28px 0 4px;}
+  .section-head.with-action{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;}
+  .section-title{font-size:15px;font-weight:600;}
+  .section-sub{font-size:12.5px;color:var(--ink-muted);margin-top:2px;}
+
+  .text-link{background:none;border:none;color:var(--accent-strong);font-size:12px;font-weight:600;cursor:pointer;padding:0;flex-shrink:0;white-space:nowrap;}
+  .text-link:hover{text-decoration:underline;}
+  .row-right{display:flex;align-items:center;gap:9px;flex-shrink:0;}
+  .edit-btn{
+    width:25px;height:25px;border-radius:50%;border:1px solid var(--border);
+    background:none;color:var(--ink-faint);display:inline-flex;align-items:center;justify-content:center;
+    cursor:pointer;flex-shrink:0;transition:background .15s,color .15s;
+  }
+  .edit-btn:hover{background:var(--surface-sunken);color:var(--ink-muted);}
+  .edit-btn svg{width:12.5px;height:12.5px;}
+
+  /* ---------- donut ---------- */
+  .chart-card{margin-top:12px;}
+  .donut-row{display:flex;flex-wrap:wrap;align-items:center;gap:20px;}
+  .legend{flex:1;min-width:170px;display:flex;flex-direction:column;gap:9px;}
+  .legend-item{display:flex;align-items:center;gap:8px;font-size:12.5px;}
+  .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .legend-item .nombre{flex:1;color:var(--ink);}
+  .legend-item .pct{color:var(--ink-muted);font-size:11.5px;}
+
+  /* ---------- plan de gasto consciente ---------- */
+  .plan-row{display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--border);}
+  .plan-row:last-child{border-bottom:none;}
+  .plan-row .dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .plan-row .info{flex:1;min-width:0;}
+  .plan-row .nombre{font-size:13.5px;}
+  .plan-row .meta{font-size:11.5px;color:var(--ink-muted);}
+  .plan-row .pct{font-family:var(--serif);font-size:16px;flex-shrink:0;}
+  .plan-row .bar-track{height:5px;background:var(--surface-sunken);border-radius:3px;margin-top:7px;overflow:hidden;}
+  .plan-row .bar-fill{height:100%;border-radius:3px;}
+
+  /* ---------- categorías ---------- */
+  .cat-row{padding:12px 0;border-bottom:1px solid var(--border);}
+  .cat-row:last-child{border-bottom:none;}
+  .cat-row.zero{opacity:.6;}
+  .cat-top{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;margin-bottom:7px;}
+  .cat-row.zero .cat-top{margin-bottom:0;}
+  .cat-top .cifras{color:var(--ink-muted);font-size:12.5px;}
+  .cat-top .cifras strong{color:var(--ink);font-weight:600;}
+  .cat-bar-track{height:6px;background:var(--surface-sunken);border-radius:3px;overflow:hidden;}
+  .cat-bar-fill{height:100%;border-radius:3px;background:var(--accent);}
+  .cat-bar-fill.warn{background:var(--warn);}
+  .cat-bar-fill.over{background:var(--danger);}
+  .cat-flag{display:flex;align-items:center;gap:5px;font-size:11px;margin-top:6px;}
+  .cat-flag svg{width:12px;height:12px;flex-shrink:0;}
+  .cat-flag.warn{color:var(--warn);}
+  .cat-flag.over{color:var(--danger);}
+  .cat-zero-note{font-size:11px;color:var(--ink-faint);margin-top:2px;}
+
+  /* ---------- hormiga ---------- */
+  .hormiga-list{display:flex;flex-direction:column;gap:2px;margin-bottom:4px;}
+  .hormiga-row{display:flex;justify-content:space-between;font-size:12.5px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .hormiga-row:last-of-type{border-bottom:none;}
+  .hormiga-row .n{color:var(--ink-muted);}
+  .hormiga-total{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-top:12px;padding-top:14px;border-top:1px dashed var(--border);
+  }
+  .hormiga-total .label{font-size:12px;color:var(--ink-muted);}
+  .hormiga-total .valor{font-family:var(--serif);font-size:15px;}
+  .hormiga-annual{margin-top:10px;background:var(--warn-soft);color:var(--warn);border-radius:var(--radius-sm);padding:12px 14px;font-size:12.5px;line-height:1.5;}
+  .hormiga-annual b{font-family:var(--serif);font-size:18px;display:block;margin-bottom:2px;color:var(--warn);}
+
+  /* ---------- cuentas ---------- */
+  .cuentas{display:flex;flex-direction:column;gap:8px;}
+  .cuenta{display:flex;justify-content:space-between;align-items:center;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:12px 14px;}
+  .cuenta .banco{display:flex;align-items:center;gap:10px;min-width:0;}
+  .banco-tag{font-size:10.5px;font-weight:700;color:#fff;padding:3px 7px;border-radius:5px;letter-spacing:0.01em;flex-shrink:0;}
+  .tag-bcp{background:#0A5C36;}
+  .tag-ibk{background:#00558C;}
+  .tag-pic{background:#FFC20E;color:#3A2E00;}
+  .wallet-tag{font-size:9px;font-weight:700;color:#fff;padding:2px 6px;border-radius:5px;letter-spacing:0.01em;flex-shrink:0;}
+  .tag-yape{background:#742284;}
+  .tag-plin{background:#00B4A6;}
+  .cuenta-info{min-width:0;}
+  .cuenta .nombre-cuenta{font-size:13px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .cuenta .sync-note{font-size:10.5px;color:var(--ink-faint);margin-top:1px;}
+  .cuenta .saldo{font-family:var(--serif);font-size:16px;flex-shrink:0;}
+
+  /* ---------- fondo / deuda ---------- */
+  .meta-top{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:9px;}
+  .meta-top .cifras{color:var(--ink-muted);}
+  .meta-bar-track{height:8px;background:var(--surface-sunken);border-radius:4px;overflow:hidden;}
+  .meta-bar-fill{height:100%;background:var(--accent);border-radius:4px;}
+  .meta-note{font-size:11.5px;color:var(--ink-muted);margin-top:9px;}
+
+  .debt-card .debt-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px;}
+  .debt-card .debt-name{font-size:13.5px;font-weight:600;}
+  .debt-card .debt-rate{font-size:11.5px;color:var(--danger);}
+  .debt-bar-track{height:6px;background:var(--surface-sunken);border-radius:3px;overflow:hidden;margin-bottom:8px;}
+  .debt-bar-fill{height:100%;background:var(--danger);border-radius:3px;}
+  .debt-meta{display:flex;justify-content:space-between;font-size:11.5px;color:var(--ink-muted);}
+  .debt-due{font-size:11.5px;color:var(--ink-muted);margin-top:6px;}
+  .debt-due b{color:var(--ink);font-weight:600;}
+  .debt-suggestion{margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);font-size:12px;color:var(--ink-muted);line-height:1.5;}
+  .debt-suggestion b{color:var(--ink);}
+
+  /* ---------- cuotas ---------- */
+  .cuota-row{padding:11px 0;border-bottom:1px solid var(--border);}
+  .cuota-row:last-of-type{border-bottom:none;}
+  .cuota-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;}
+  .cuota-top .comercio{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:8px;}
+  .cuota-top .monto{color:var(--ink-muted);flex-shrink:0;}
+  .cuota-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .cuota-progress{flex:1;height:4px;background:var(--surface-sunken);border-radius:2px;overflow:hidden;}
+  .cuota-progress i{display:block;height:100%;background:var(--cat-5);border-radius:2px;}
+  .cuota-meta .n{font-size:11px;color:var(--ink-faint);flex-shrink:0;}
+  .cuota-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:12px;padding-top:12px;border-top:1px dashed var(--border);font-size:12px;color:var(--ink-muted);}
+  .cuota-total .valor{font-family:var(--serif);font-size:15px;color:var(--ink);}
+  .cuota-note{font-size:11px;color:var(--ink-faint);margin-top:6px;padding-bottom:2px;line-height:1.4;}
+
+  /* ---------- suscripciones ---------- */
+  .sub-row{display:flex;justify-content:space-between;align-items:center;font-size:13px;padding:9px 0;border-bottom:1px solid var(--border);}
+  .sub-row:last-child{border-bottom:none;}
+  .sub-row .precio{color:var(--ink-muted);}
+
+  /* ---------- resumen (movimientos, desktop) ---------- */
+  .summary-row{display:flex;justify-content:space-between;font-size:13px;padding:9px 0;border-bottom:1px solid var(--border);}
+  .summary-row:last-child{border-bottom:none;}
+  .summary-row .valor{font-family:var(--serif);font-size:15px;}
+  .summary-row .valor.income{color:var(--accent-strong);}
+
+  /* ---------- transacciones ---------- */
+  .tx-day-label{font-size:11px;font-weight:600;color:var(--ink-faint);text-transform:uppercase;letter-spacing:0.05em;padding:12px 0 6px;}
+  .tx-day-label:first-child{padding-top:2px;}
+  .tx{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);}
+  .tx:last-child{border-bottom:none;}
+  .tx.transfer{opacity:0.55;}
+  .tx-left{display:flex;align-items:center;gap:10px;min-width:0;}
+  .tx-info{min-width:0;}
+  .tx-merchant{font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .tx-meta{font-size:11.5px;color:var(--ink-muted);display:flex;align-items:center;gap:6px;margin-top:3px;flex-wrap:wrap;}
+  .tx-cat-pill{background:var(--accent-soft);color:var(--accent-strong);font-size:10.5px;padding:2px 6px;border-radius:5px;}
+  .tx-cat-pill.transfer{background:var(--surface-sunken);color:var(--ink-muted);}
+  .tx-cat-pill.suggested{background:none;border:1px dashed var(--ink-faint);color:var(--ink-muted);cursor:pointer;}
+  .tx-cat-pill.suggested:hover{border-color:var(--accent-strong);color:var(--accent-strong);}
+  .tx-hours{color:var(--ink-faint);font-style:italic;}
+  .tx-amount{font-family:var(--serif);font-size:14.5px;flex-shrink:0;padding-left:10px;}
+  .tx-amount.income{color:var(--accent-strong);}
+
+  .ver-mas{
+    display:block;width:100%;text-align:center;background:none;border:none;
+    padding:13px 0 10px;margin-top:2px;font-size:12.5px;font-weight:600;
+    color:var(--accent-strong);cursor:pointer;
+  }
+  .ver-mas:hover{text-decoration:underline;}
+
+  /* ================= DESKTOP ================= */
+  @media (min-width:900px){
+    .page{max-width:1160px;padding:32px 44px 72px;}
+    .topbar-row{align-items:flex-start;}
+    .hero-row{flex-direction:row;gap:16px;margin-bottom:20px;}
+    .hero-primary{flex:1.1;}
+    .hero-secondary{flex:1;}
+    .insights-row{grid-template-columns:repeat(4,1fr);margin-bottom:26px;}
+    .insight-label .short{display:none;}
+    .insight-label .long{display:inline;}
+    .dashboard-grid{display:grid;grid-template-columns:1.7fr 1fr;gap:24px;align-items:start;}
+    .col-side{display:flex;flex-direction:column;gap:0;}
+    .col-main > .section-head:first-child, .col-side > .section-head:first-child{margin-top:0;}
+    .stats-grid{grid-template-columns:repeat(4,1fr);}
+    .donut-row{flex-wrap:nowrap;}
+    .bottom-nav{display:none;}
+    .top-nav{
+      display:flex;gap:22px;border-bottom:1px solid var(--border);margin-bottom:22px;
+    }
+    .top-nav button{
+      display:flex;align-items:center;gap:7px;background:none;border:none;
+      color:var(--ink-muted);font-size:13.5px;font-weight:600;cursor:pointer;
+      padding:11px 2px;border-bottom:2px solid transparent;
+      transition:color .15s,border-color .15s;
+    }
+    .top-nav button svg{width:16px;height:16px;}
+    .top-nav button:hover{color:var(--ink);}
+    .top-nav button.active{color:var(--accent-strong);border-color:var(--accent-strong);}
+  }
+</style>
+
+<div class="page">
+
+  <div class="topbar">
+    <div class="topbar-row">
+      <div class="brand">
+        <span class="brand-mark">Wealth OS</span>
+        <span class="brand-example">· datos de ejemplo</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="month-nav">
+          <button aria-label="Mes anterior" onclick="void 0">‹</button>
+          <div class="select-wrap">
+            <select class="month-select" aria-label="Seleccionar mes">
+              <option>octubre 2025</option>
+              <option>noviembre 2025</option>
+              <option>diciembre 2025</option>
+              <option>enero 2026</option>
+              <option>febrero 2026</option>
+              <option>marzo 2026</option>
+              <option>abril 2026</option>
+              <option>mayo 2026</option>
+              <option>junio 2026</option>
+              <option>julio 2026</option>
+              <option>agosto 2026</option>
+              <option selected>septiembre 2026</option>
+            </select>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <button aria-label="Mes siguiente" onclick="void 0">›</button>
+        </div>
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="Activar modo oscuro" aria-pressed="false">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8 6 18M18 6l1.8-1.8"/></svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" hidden><path d="M20.5 14.7A8.5 8.5 0 1 1 9.3 3.5a7 7 0 0 0 11.2 11.2Z"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="sync-pill"><span class="sync-dot" aria-hidden="true"></span>Sincronizado automáticamente · hace 3 min</div>
+  </div>
+
+  <nav class="top-nav" aria-label="Navegación principal">
+    <button class="active" type="button" data-screen="inicio" aria-current="page">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9.5a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
+      Inicio
+    </button>
+    <button type="button" data-screen="movimientos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2-3 2V4a1 1 0 0 1 1-1Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+      Movimientos
+    </button>
+    <button type="button" data-screen="presupuesto">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z"/></svg>
+      Presupuesto
+    </button>
+    <button type="button" data-screen="cuentas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+      Cuentas
+    </button>
+  </nav>
+
+  <!-- ================= INICIO ================= -->
+  <div class="screen" id="screen-inicio">
+
+    <div class="hero-row">
+      <div class="card hero-primary">
+        <div class="hero-eyebrow">Cada sol tiene un trabajo asignado</div>
+        <div class="label">Disponible real hoy</div>
+        <div class="valor tabular">S/ 3,005</div>
+        <div class="desglose">
+          <div class="row"><span>En cuentas líquidas</span><b class="tabular">S/ 5,650</b></div>
+          <div class="row"><span>− Fijos pendientes (alquiler)</span><b class="tabular">S/ 1,800</b></div>
+          <div class="row"><span>− Cuotas de tarjeta este mes</span><b class="tabular">S/ 175</b></div>
+          <div class="row"><span>− Apartado para tu meta de ahorro</span><b class="tabular">S/ 670</b></div>
+        </div>
+      </div>
+
+      <div class="card hero-secondary">
+        <div class="top-row">
+          <div>
+            <div class="label">Patrimonio neto</div>
+            <div class="valor tabular" id="trendValor">S/ 42,300</div>
+            <div class="delta tabular" id="trendDelta">+ S/ 1,150 en los últimos 6 meses</div>
+          </div>
+          <div class="range-toggle" role="group" aria-label="Rango del gráfico">
+            <button class="active" data-range="1m">1M</button>
+            <button data-range="3m">3M</button>
+            <button data-range="6m">6M</button>
+            <button data-range="1a">1A</button>
+          </div>
+        </div>
+        <div class="trend-wrap" id="trendWrap">
+          <svg viewBox="0 0 300 92" id="trendSvg" role="img" aria-label="Evolución del patrimonio neto">
+            <defs>
+              <linearGradient id="areaFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="var(--accent)" stop-opacity="0.22"/>
+                <stop offset="100%" stop-color="var(--accent)" stop-opacity="0"/>
+              </linearGradient>
+            </defs>
+            <polygon id="trendArea" fill="url(#areaFill)" points=""/>
+            <polyline id="trendLine" fill="none" stroke="var(--accent)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" points=""/>
+            <line id="crossLine" x1="0" y1="0" x2="0" y2="80" stroke="var(--ink-faint)" stroke-width="1" stroke-dasharray="2 2" opacity="0"/>
+            <circle id="crossDot" r="3.5" fill="var(--accent)" opacity="0"/>
+            <circle id="trendEnd" r="4" fill="var(--accent)"/>
+          </svg>
+          <div class="trend-tooltip" id="trendTip"></div>
+        </div>
+        <div class="trend-axis" id="trendAxis"><span></span><span></span></div>
+      </div>
+    </div>
+
+    <div class="insights-row">
+      <div class="insight warn">
+        <div class="insight-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg></div>
+        <div class="insight-body">
+          <div class="insight-eyebrow">Atención</div>
+          <div class="insight-num tabular">+19%</div>
+          <div class="insight-label"><span class="short">Restaurantes vs. agosto</span><span class="long">Restaurantes y delivery subió 19% vs. agosto — ya superaste el presupuesto del mes.</span></div>
+        </div>
+      </div>
+      <div class="insight good">
+        <div class="insight-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17l5-5 4 3 7-8"/><path d="M15 6h5v5"/></svg></div>
+        <div class="insight-body">
+          <div class="insight-eyebrow">Buena señal</div>
+          <div class="insight-num tabular">27%</div>
+          <div class="insight-label"><span class="short">Tasa de ahorro, +3pts</span><span class="long">Tu tasa de ahorro subió de 24% a 27% este mes.</span></div>
+        </div>
+      </div>
+      <div class="insight info">
+        <div class="insight-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg></div>
+        <div class="insight-body">
+          <div class="insight-eyebrow">Proyección</div>
+          <div class="insight-num tabular">~5 meses</div>
+          <div class="insight-label"><span class="short">Fondo de emergencia listo</span><span class="long">Al ritmo actual, tu fondo de emergencia estará listo en ~5 meses.</span></div>
+        </div>
+      </div>
+      <div class="insight info">
+        <div class="insight-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="9" cy="9" r="6"/><circle cx="15" cy="15" r="6"/></svg></div>
+        <div class="insight-body">
+          <div class="insight-eyebrow">Gasto hormiga</div>
+          <div class="insight-num tabular">S/ 2,244</div>
+          <div class="insight-label"><span class="short">Al año, S/187/mes</span><span class="long">Tus gastos chicos suman S/ 187/mes — S/ 2,244 al año si se mantienen.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="stats-label">Tu mes en números</div>
+    <div class="stats-grid">
+      <div class="stat">
+        <div class="label">Ingreso del mes</div>
+        <div class="valor tabular">S/ 8,500</div>
+        <div class="delta tabular up-good">+ S/ 300 vs. agosto</div>
+      </div>
+      <div class="stat">
+        <div class="label">Gasto real</div>
+        <div class="valor tabular">S/ 5,200</div>
+        <div class="delta tabular up-warn">+ S/ 480 vs. agosto</div>
+      </div>
+      <div class="stat">
+        <div class="label">Tasa de ahorro</div>
+        <div class="valor tabular">27%</div>
+        <div class="delta tabular up-good">+ 3 pts vs. agosto</div>
+        <div class="spark" aria-hidden="true">
+          <i style="height:55%" title="Abr · 22%"></i>
+          <i style="height:60%" title="May · 23%"></i>
+          <i style="height:50%" title="Jun · 21%"></i>
+          <i style="height:65%" title="Jul · 24%"></i>
+          <i style="height:80%" title="Ago · 26%"></i>
+          <i class="now" style="height:100%" title="Sep · 27%"></i>
+        </div>
+      </div>
+      <div class="stat">
+        <div class="label">Gastos fijos</div>
+        <div class="valor tabular">54%</div>
+        <div class="delta flat">+ 1 pt vs. agosto</div>
+      </div>
+    </div>
+
+    <div class="stats-label">Compromisos recurrentes</div>
+    <div class="commit-row">
+      <button class="commit-chip" type="button" data-goto="presupuesto">
+        <div class="commit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-3-6.7"/><path d="M21 3v6h-6"/></svg></div>
+        <div class="commit-body">
+          <span class="commit-label">Suscripciones</span>
+          <span class="commit-val tabular">S/ 95/mes</span>
+        </div>
+      </button>
+      <button class="commit-chip" type="button" data-goto="presupuesto">
+        <div class="commit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <div class="commit-body">
+          <span class="commit-label">Cuotas activas</span>
+          <span class="commit-val tabular">S/ 175/mes</span>
+        </div>
+      </button>
+      <button class="commit-chip warn" type="button" data-goto="cuentas">
+        <div class="commit-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8 12h8"/></svg></div>
+        <div class="commit-body">
+          <span class="commit-label">Deuda pendiente</span>
+          <span class="commit-val tabular">S/ 1,180</span>
+        </div>
+      </button>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="col-main">
+
+        <div class="section-head">
+          <div class="section-title">Gasto por categoría</div>
+          <div class="section-sub">S/ 5,200 en total este mes</div>
+        </div>
+        <div class="card chart-card">
+          <div class="donut-row">
+            <svg viewBox="0 0 140 140" width="140" height="140" style="flex-shrink:0;" role="img" aria-label="Distribución del gasto por categoría">
+              <g transform="rotate(-90 70 70)">
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--cat-1)" stroke-width="18" stroke-dasharray="117.4 221.9" stroke-dashoffset="0"/>
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--cat-2)" stroke-width="18" stroke-dasharray="45.8 293.5" stroke-dashoffset="-117.4"/>
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--cat-3)" stroke-width="18" stroke-dasharray="40.4 298.9" stroke-dashoffset="-163.2"/>
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--cat-4)" stroke-width="18" stroke-dasharray="26.8 312.5" stroke-dashoffset="-203.6"/>
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--cat-5)" stroke-width="18" stroke-dasharray="18.3 321" stroke-dashoffset="-230.4"/>
+                <circle cx="70" cy="70" r="54" fill="none" stroke="var(--cat-6)" stroke-width="18" stroke-dasharray="90.6 248.7" stroke-dashoffset="-248.7"/>
+              </g>
+            </svg>
+            <div class="legend">
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cat-1);"></span><span class="nombre">Vivienda</span><span class="pct tabular">35% · S/ 1,800</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cat-2);"></span><span class="nombre">Compras personales</span><span class="pct tabular">13% · S/ 700</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cat-3);"></span><span class="nombre">Alimentación</span><span class="pct tabular">12% · S/ 620</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cat-4);"></span><span class="nombre">Restaurantes</span><span class="pct tabular">8% · S/ 410</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cat-5);"></span><span class="nombre">Transporte</span><span class="pct tabular">5% · S/ 280</span></div>
+              <div class="legend-item"><span class="legend-dot" style="background:var(--cat-6);"></span><span class="nombre">Otros</span><span class="pct tabular">27% · S/ 1,390</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title">Categorías a vigilar</div>
+          <div class="section-sub">Las más cerca del límite o ya sobre el presupuesto</div>
+        </div>
+        <div class="card">
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Suscripciones</span><span class="cifras tabular"><strong>S/ 135</strong> / 100</span></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+            <div class="cat-flag over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>S/ 35 sobre el presupuesto</div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Servicios</span><span class="cifras tabular"><strong>S/ 429</strong> / 350</span></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+            <div class="cat-flag over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>S/ 79 sobre el presupuesto</div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Restaurantes y delivery</span><span class="cifras tabular"><strong>S/ 410</strong> / 350</span></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+            <div class="cat-flag over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>S/ 60 sobre el presupuesto</div>
+          </div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title">Plan de gasto consciente</div>
+          <div class="section-sub">Cómo se reparte tu ingreso por grandes bloques</div>
+        </div>
+        <div class="card">
+          <div class="plan-row">
+            <span class="dot" style="background:var(--ink);"></span>
+            <div class="info">
+              <div class="nombre">Costos fijos</div>
+              <div class="meta">Vivienda, servicios, deudas · meta 50–60%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:54%;background:var(--ink);"></div></div>
+            </div>
+            <div class="pct tabular">54%</div>
+          </div>
+          <div class="plan-row">
+            <span class="dot" style="background:var(--accent);"></span>
+            <div class="info">
+              <div class="nombre">Inversiones</div>
+              <div class="meta">Aportes de inversión · meta 10%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:9%;background:var(--accent);"></div></div>
+            </div>
+            <div class="pct tabular">9%</div>
+          </div>
+          <div class="plan-row">
+            <span class="dot" style="background:var(--cat-3);"></span>
+            <div class="info">
+              <div class="nombre">Ahorro</div>
+              <div class="meta">Fondo de emergencia y metas · meta 10%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:18%;background:var(--cat-3);"></div></div>
+            </div>
+            <div class="pct tabular">18%</div>
+          </div>
+          <div class="plan-row">
+            <span class="dot" style="background:var(--warn);"></span>
+            <div class="info">
+              <div class="nombre">Gasto libre</div>
+              <div class="meta">Sin culpa: salidas, gustos, hobbies · meta 20–35%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:19%;background:var(--warn);"></div></div>
+            </div>
+            <div class="pct tabular">19%</div>
+          </div>
+        </div>
+        <button class="ver-mas" type="button" data-goto="presupuesto">Ver presupuesto completo →</button>
+
+        <div class="section-head">
+          <div class="section-title">Movimientos recientes</div>
+        </div>
+        <div class="card" style="padding:6px 18px;">
+          <div class="tx-day-label">Hoy</div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Tottus San Isidro</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 6:40 pm <span class="tx-cat-pill">Alimentación</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 84.30</div>
+          </div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Rappi *Delivery</div>
+                <div class="tx-meta"><span class="banco-tag tag-ibk" style="font-size:9px;">IBK</span> 1:15 pm <span class="tx-cat-pill">Restaurantes</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 46.90</div>
+          </div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Apple.com/Bill (iCloud)</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 5:03 am <button class="tx-cat-pill suggested" type="button">¿Suscripción?</button></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 4.90</div>
+          </div>
+        </div>
+        <button class="ver-mas" type="button" data-goto="movimientos">Ver todos los movimientos →</button>
+
+      </div>
+
+      <div class="col-side">
+        <div class="section-head">
+          <div class="section-title">Cuentas</div>
+        </div>
+        <div class="cuentas">
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-bcp">BCP</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Cuenta sueldo <span class="wallet-tag tag-yape">Yape</span></div><div class="sync-note">sincronizado hace 3 min</div></div>
+            </div>
+            <div class="saldo tabular">S/ 3,200</div>
+          </div>
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-bcp">BCP</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Ahorros</div><div class="sync-note">sincronizado hace 3 min</div></div>
+            </div>
+            <div class="saldo tabular">S/ 12,400</div>
+          </div>
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-ibk">IBK</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Cuenta corriente <span class="wallet-tag tag-plin">Plin</span></div><div class="sync-note">sincronizado hace 18 min</div></div>
+            </div>
+            <div class="saldo tabular">S/ 2,100</div>
+          </div>
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-pic">Pichincha</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Ahorros</div><div class="sync-note">sincronizado ayer</div></div>
+            </div>
+            <div class="saldo tabular">S/ 350</div>
+          </div>
+        </div>
+        <button class="ver-mas" type="button" data-goto="cuentas">Ver fondo de emergencia y deudas →</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ================= MOVIMIENTOS ================= -->
+  <div class="screen" id="screen-movimientos" hidden>
+    <div class="screen-head">
+      <div class="screen-title">Movimientos</div>
+      <div class="screen-sub">11 movimientos en septiembre · categoría con borde punteado = sugerida, toca para confirmarla</div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="col-main">
+
+        <div class="toolbar-row">
+          <div class="filter-select-wrap">
+            <select aria-label="Filtrar por categoría">
+              <option>Todas las categorías</option>
+              <option>Alimentación</option>
+              <option>Restaurantes</option>
+              <option>Transporte</option>
+              <option>Servicios</option>
+              <option>Suscripciones</option>
+              <option>Transferencias</option>
+            </select>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
+          </div>
+          <button class="btn-add" type="button">+ Agregar gasto manual</button>
+        </div>
+
+        <div class="card" style="padding:6px 18px;">
+          <div class="tx-day-label">Hoy</div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Tottus San Isidro</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 6:40 pm <span class="tx-cat-pill">Alimentación</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 84.30</div>
+          </div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Rappi *Delivery</div>
+                <div class="tx-meta"><span class="banco-tag tag-ibk" style="font-size:9px;">IBK</span> 1:15 pm <span class="tx-cat-pill">Restaurantes</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 46.90</div>
+          </div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Apple.com/Bill (iCloud)</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 5:03 am <button class="tx-cat-pill suggested" type="button">¿Suscripción?</button></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 4.90</div>
+          </div>
+
+          <div class="tx-day-label">Ayer</div>
+          <div class="tx transfer">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">A cuenta Interbank propia</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 9:02 am <span class="tx-cat-pill transfer">Transferencia interna</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">S/ 500.00</div>
+          </div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Cineplanet</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 7:50 pm <span class="tx-cat-pill">Entretenimiento</span> <span class="tx-hours">≈ 47 min de trabajo</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 38.00</div>
+          </div>
+
+          <div class="tx-day-label">10 sep</div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Luz del Sur</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 8:15 am <span class="tx-cat-pill">Servicios</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 112.40</div>
+          </div>
+
+          <div class="tx-day-label">8 sep</div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Plaza Vea</div>
+                <div class="tx-meta"><span class="banco-tag tag-ibk" style="font-size:9px;">IBK</span> 6:20 pm <span class="tx-cat-pill">Alimentación</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 95.20</div>
+          </div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Grifo Primax</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 8:05 am <span class="tx-cat-pill">Transporte</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 60.00</div>
+          </div>
+
+          <div class="tx-day-label">5 sep</div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Claro — Plan móvil</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 2:00 pm <span class="tx-cat-pill">Servicios</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 89.00</div>
+          </div>
+
+          <div class="tx-day-label">3 sep</div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Smart Fit</div>
+                <div class="tx-meta"><span class="banco-tag tag-ibk" style="font-size:9px;">IBK</span> 7:00 am <span class="tx-cat-pill">Suscripciones</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular">− S/ 40.00</div>
+          </div>
+
+          <div class="tx-day-label">1 sep</div>
+          <div class="tx">
+            <div class="tx-left">
+              <div class="tx-info">
+                <div class="tx-merchant">Sueldo — Empresa SAC</div>
+                <div class="tx-meta"><span class="banco-tag tag-bcp" style="font-size:9px;">BCP</span> 12:01 am <span class="tx-cat-pill">Ingreso</span></div>
+              </div>
+            </div>
+            <div class="tx-amount tabular income">+ S/ 8,500.00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-side">
+        <div class="section-head">
+          <div class="section-title">Resumen del mes</div>
+        </div>
+        <div class="card" style="padding:6px 18px;">
+          <div class="summary-row"><span>Ingresos</span><span class="valor tabular income">S/ 8,500</span></div>
+          <div class="summary-row"><span>Gastos</span><span class="valor tabular">S/ 5,200</span></div>
+          <div class="summary-row"><span>Transferencias internas</span><span class="valor tabular">S/ 500</span></div>
+          <div class="summary-row"><span>Categoría con más gasto</span><span class="valor tabular">Vivienda</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= PRESUPUESTO ================= -->
+  <div class="screen" id="screen-presupuesto" hidden>
+    <div class="screen-head">
+      <div class="screen-title">Presupuesto</div>
+      <div class="screen-sub">Plan de gasto, límites por categoría y compromisos recurrentes</div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="col-main">
+
+        <div class="section-head with-action">
+          <div>
+            <div class="section-title">Plan de gasto consciente</div>
+            <div class="section-sub">Cómo se reparte tu ingreso por grandes bloques</div>
+          </div>
+          <button class="text-link" type="button">Editar metas</button>
+        </div>
+        <div class="card">
+          <div class="plan-row">
+            <span class="dot" style="background:var(--ink);"></span>
+            <div class="info">
+              <div class="nombre">Costos fijos</div>
+              <div class="meta">Vivienda, servicios, deudas · meta 50–60%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:54%;background:var(--ink);"></div></div>
+            </div>
+            <div class="pct tabular">54%</div>
+          </div>
+          <div class="plan-row">
+            <span class="dot" style="background:var(--accent);"></span>
+            <div class="info">
+              <div class="nombre">Inversiones</div>
+              <div class="meta">Aportes de inversión · meta 10%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:9%;background:var(--accent);"></div></div>
+            </div>
+            <div class="pct tabular">9%</div>
+          </div>
+          <div class="plan-row">
+            <span class="dot" style="background:var(--cat-3);"></span>
+            <div class="info">
+              <div class="nombre">Ahorro</div>
+              <div class="meta">Fondo de emergencia y metas · meta 10%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:18%;background:var(--cat-3);"></div></div>
+            </div>
+            <div class="pct tabular">18%</div>
+          </div>
+          <div class="plan-row">
+            <span class="dot" style="background:var(--warn);"></span>
+            <div class="info">
+              <div class="nombre">Gasto libre</div>
+              <div class="meta">Sin culpa: salidas, gustos, hobbies · meta 20–35%</div>
+              <div class="bar-track"><div class="bar-fill" style="width:19%;background:var(--warn);"></div></div>
+            </div>
+            <div class="pct tabular">19%</div>
+          </div>
+        </div>
+
+        <div class="section-head with-action">
+          <div>
+            <div class="section-title">Presupuesto por categoría</div>
+            <div class="section-sub">Ordenadas por urgencia — las más sobre el límite primero</div>
+          </div>
+          <button class="text-link" type="button">+ Agregar</button>
+        </div>
+        <div class="card">
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Suscripciones</span><div class="row-right"><span class="cifras tabular"><strong>S/ 135</strong> / 100</span><button class="edit-btn" type="button" aria-label="Editar límite de Suscripciones"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+            <div class="cat-flag over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>S/ 35 sobre el presupuesto</div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Servicios</span><div class="row-right"><span class="cifras tabular"><strong>S/ 429</strong> / 350</span><button class="edit-btn" type="button" aria-label="Editar límite de Servicios"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+            <div class="cat-flag over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>S/ 79 sobre el presupuesto</div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Restaurantes y delivery</span><div class="row-right"><span class="cifras tabular"><strong>S/ 410</strong> / 350</span><button class="edit-btn" type="button" aria-label="Editar límite de Restaurantes"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+            <div class="cat-flag over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>S/ 60 sobre el presupuesto</div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Alimentación</span><div class="row-right"><span class="cifras tabular"><strong>S/ 715</strong> / 700</span><button class="edit-btn" type="button" aria-label="Editar límite de Alimentación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill over" style="width:100%;"></div></div>
+            <div class="cat-flag over"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6"><path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z"/></svg>S/ 15 sobre el presupuesto</div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Transporte</span><div class="row-right"><span class="cifras tabular"><strong>S/ 340</strong> / 400</span><button class="edit-btn" type="button" aria-label="Editar límite de Transporte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill" style="width:85%;"></div></div>
+          </div>
+          <div class="cat-row">
+            <div class="cat-top"><span class="nombre">Entretenimiento</span><div class="row-right"><span class="cifras tabular"><strong>S/ 150</strong> / 250</span><button class="edit-btn" type="button" aria-label="Editar límite de Entretenimiento"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-bar-track"><div class="cat-bar-fill" style="width:60%;"></div></div>
+          </div>
+          <div class="cat-row zero">
+            <div class="cat-top"><span class="nombre">Salud</span><div class="row-right"><span class="cifras tabular">S/ 0 / 200</span><button class="edit-btn" type="button" aria-label="Editar límite de Salud"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-zero-note">Sin movimiento este mes</div>
+          </div>
+          <div class="cat-row zero">
+            <div class="cat-top"><span class="nombre">Educación</span><div class="row-right"><span class="cifras tabular">S/ 0 / 150</span><button class="edit-btn" type="button" aria-label="Editar límite de Educación"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-zero-note">Sin movimiento este mes</div>
+          </div>
+          <div class="cat-row zero">
+            <div class="cat-top"><span class="nombre">Regalos y otros</span><div class="row-right"><span class="cifras tabular">S/ 0 / 100</span><button class="edit-btn" type="button" aria-label="Editar límite de Regalos y otros"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div></div>
+            <div class="cat-zero-note">Sin movimiento este mes</div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="col-side">
+        <div class="section-head">
+          <div class="section-title">Gasto hormiga anualizado</div>
+          <div class="section-sub">Lo chico también cuenta — proyectado a 12 meses</div>
+        </div>
+        <div class="card">
+          <div class="hormiga-list">
+            <div class="hormiga-row"><span class="n">Café y snacks (bodega, cafetería)</span><span class="tabular">S/ 102</span></div>
+            <div class="hormiga-row"><span class="n">Apps y compras digitales sueltas</span><span class="tabular">S/ 45</span></div>
+            <div class="hormiga-row"><span class="n">Propinas y cargos de delivery</span><span class="tabular">S/ 40</span></div>
+          </div>
+          <div class="hormiga-total"><span class="label">Total este mes</span><span class="valor tabular">S/ 187</span></div>
+          <div class="hormiga-annual"><b class="tabular">S/ 2,244 / año</b>si mantienes este ritmo — el equivalente a una escapada de fin de semana.</div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title">Suscripciones</div>
+          <div class="section-sub">S/ 95/mes · S/ 1,140 al año</div>
+        </div>
+        <div class="card" style="padding:6px 18px;">
+          <div class="sub-row"><span class="nombre">Netflix</span><div class="row-right"><span class="precio tabular">S/ 34.90</span><button class="text-link" type="button">Editar</button></div></div>
+          <div class="sub-row"><span class="nombre">Spotify</span><div class="row-right"><span class="precio tabular">S/ 19.90</span><button class="text-link" type="button">Editar</button></div></div>
+          <div class="sub-row"><span class="nombre">Gimnasio</span><div class="row-right"><span class="precio tabular">S/ 40.00</span><button class="text-link" type="button">Editar</button></div></div>
+        </div>
+
+        <div class="section-head">
+          <div class="section-title">Cuotas activas</div>
+          <div class="section-sub">Compromisos que ya están tomados, no solo lo de este mes</div>
+        </div>
+        <div class="card" style="padding:6px 18px;">
+          <div class="cuota-row">
+            <div class="cuota-top"><span class="comercio">Audífonos — Tottus (BCP Visa)</span><span class="monto tabular">S/ 45/mes</span></div>
+            <div class="cuota-meta"><div class="cuota-progress"><i style="width:50%;"></i></div><span class="n">cuota 3/6</span><button class="edit-btn" type="button" aria-label="Marcar cuota de septiembre como pagada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></button></div>
+          </div>
+          <div class="cuota-row">
+            <div class="cuota-top"><span class="comercio">Pasaje LATAM (Interbank)</span><span class="monto tabular">S/ 130/mes</span></div>
+            <div class="cuota-meta"><div class="cuota-progress"><i style="width:17%;"></i></div><span class="n">cuota 2/12</span><button class="edit-btn" type="button" aria-label="Marcar cuota de septiembre como pagada"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12l5 5L20 6"/></svg></button></div>
+          </div>
+          <div class="cuota-total"><span>Comprometido este mes</span><span class="valor tabular">S/ 175</span></div>
+          <div class="cuota-note">Se confirma solo al detectar el pago de tu tarjeta — o márcalo aquí manualmente.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= CUENTAS ================= -->
+  <div class="screen" id="screen-cuentas" hidden>
+    <div class="screen-head">
+      <div class="screen-title">Cuentas</div>
+      <div class="screen-sub">Saldos reconstruidos a partir de tu saldo inicial + movimientos parseados — no es una conexión bancaria en vivo</div>
+    </div>
+
+    <div class="dashboard-grid">
+      <div class="col-main">
+
+        <div class="section-head with-action">
+          <div class="section-title">Cuentas conectadas</div>
+          <button class="text-link" type="button">+ Agregar cuenta</button>
+        </div>
+        <div class="cuentas">
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-bcp">BCP</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Cuenta sueldo <span class="wallet-tag tag-yape">Yape</span></div><div class="sync-note">sincronizado hace 3 min</div></div>
+            </div>
+            <div class="row-right"><div class="saldo tabular">S/ 3,200</div><button class="edit-btn" type="button" aria-label="Editar Cuenta sueldo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
+          </div>
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-bcp">BCP</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Ahorros</div><div class="sync-note">sincronizado hace 3 min</div></div>
+            </div>
+            <div class="row-right"><div class="saldo tabular">S/ 12,400</div><button class="edit-btn" type="button" aria-label="Editar Ahorros BCP"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
+          </div>
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-ibk">IBK</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Cuenta corriente <span class="wallet-tag tag-plin">Plin</span></div><div class="sync-note">sincronizado hace 18 min</div></div>
+            </div>
+            <div class="row-right"><div class="saldo tabular">S/ 2,100</div><button class="edit-btn" type="button" aria-label="Editar Cuenta corriente IBK"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
+          </div>
+          <div class="cuenta">
+            <div class="banco">
+              <span class="banco-tag tag-pic">Pichincha</span>
+              <div class="cuenta-info"><div class="nombre-cuenta">Ahorros</div><div class="sync-note">sincronizado ayer</div></div>
+            </div>
+            <div class="row-right"><div class="saldo tabular">S/ 350</div><button class="edit-btn" type="button" aria-label="Editar Ahorros Pichincha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-side">
+        <div class="section-head with-action">
+          <div class="section-title">Fondo de emergencia</div>
+          <button class="text-link" type="button">Editar meta</button>
+        </div>
+        <div class="card" style="padding:16px 18px;">
+          <div class="meta-top">
+            <span>Meta: 3 meses de gastos fijos</span>
+            <span class="cifras tabular">S/ 9,000 / S/ 15,000</span>
+          </div>
+          <div class="meta-bar-track"><div class="meta-bar-fill" style="width:60%;"></div></div>
+          <div class="meta-note">60% completado · a este ritmo, listo en ~5 meses</div>
+        </div>
+
+        <div class="section-head with-action">
+          <div>
+            <div class="section-title">Deudas</div>
+            <div class="section-sub">Método avalancha — mayor interés primero</div>
+          </div>
+          <button class="text-link" type="button">+ Agregar</button>
+        </div>
+        <div class="card debt-card" style="padding:16px 18px;">
+          <div class="debt-head">
+            <span class="debt-name">Tarjeta BCP Visa</span>
+            <div class="row-right"><span class="debt-rate">TEA 44.9%</span><button class="edit-btn" type="button" aria-label="Editar deuda Tarjeta BCP Visa"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button></div>
+          </div>
+          <div class="debt-bar-track"><div class="debt-bar-fill" style="width:59%;"></div></div>
+          <div class="debt-meta"><span class="tabular">S/ 1,180 pendiente</span><span class="tabular">de S/ 2,000</span></div>
+          <div class="debt-due">Próximo pago: <b class="tabular">15 de octubre</b></div>
+          <div class="debt-suggestion">Con tu gasto libre disponible este mes, abonar <b class="tabular">S/ 300</b> extra la cerraría en ~4 meses en vez de 7.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<nav class="bottom-nav" aria-label="Navegación principal">
+  <button class="active" type="button" data-screen="inicio" aria-current="page">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v9.5a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/></svg>
+    Inicio
+  </button>
+  <button type="button" data-screen="movimientos">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10a1 1 0 0 1 1 1v17l-3-2-2 2-2-2-2 2-2-2-3 2V4a1 1 0 0 1 1-1Z"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+    Movimientos
+  </button>
+  <button type="button" data-screen="presupuesto">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 9 9h-9V3Z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15V3.5Z"/></svg>
+    Presupuesto
+  </button>
+  <button type="button" data-screen="cuentas">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h4"/></svg>
+    Cuentas
+  </button>
+</nav>
+
+<script>
+(function(){
+  var datasets = {
+    "1m": {labels:["Sem 1","Sem 2","Sem 3","Sem 4"], values:[41150,41480,41960,42300], deltaLabel:"en las últimas 4 semanas"},
+    "3m": {labels:["Jul","Ago","Sep"], values:[39200,41150,42300], deltaLabel:"en los últimos 3 meses"},
+    "6m": {labels:["Abr","May","Jun","Jul","Ago","Sep"], values:[34500,36000,37800,39200,41150,42300], deltaLabel:"en los últimos 6 meses"},
+    "1a": {labels:["Oct","Nov","Dic","Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep"], values:[27800,28600,29900,31200,30800,32400,34500,36000,37800,39200,41150,42300], deltaLabel:"en los últimos 12 meses"}
+  };
+
+  var svg = document.getElementById('trendSvg');
+  var line = document.getElementById('trendLine');
+  var area = document.getElementById('trendArea');
+  var endDot = document.getElementById('trendEnd');
+  var crossLine = document.getElementById('crossLine');
+  var crossDot = document.getElementById('crossDot');
+  var tip = document.getElementById('trendTip');
+  var wrap = document.getElementById('trendWrap');
+  var axis = document.getElementById('trendAxis');
+  var valorEl = document.getElementById('trendValor');
+  var deltaEl = document.getElementById('trendDelta');
+  var buttons = document.querySelectorAll('.range-toggle button');
+
+  var W = 300, H = 92, padTop = 8, padBottom = 12;
+  var current = null;
+
+  function fmt(n){ return 'S/ ' + Math.round(n).toLocaleString('es-PE'); }
+
+  function render(key){
+    current = datasets[key];
+    var vals = current.values;
+    var n = vals.length;
+    var min = Math.min.apply(null, vals), max = Math.max.apply(null, vals);
+    var span = (max - min) || 1;
+    var padSpan = span * 0.15;
+    min -= padSpan; max += padSpan;
+
+    var pts = vals.map(function(v, i){
+      var x = n === 1 ? 0 : (i / (n - 1)) * W;
+      var y = padTop + (1 - (v - min) / (max - min)) * (H - padTop - padBottom);
+      return [x, y];
+    });
+
+    line.setAttribute('points', pts.map(function(p){return p[0]+','+p[1];}).join(' '));
+    area.setAttribute('points', pts.map(function(p){return p[0]+','+p[1];}).join(' ') + ' ' + W + ',' + H + ' 0,' + H);
+    endDot.setAttribute('cx', pts[n-1][0]);
+    endDot.setAttribute('cy', pts[n-1][1]);
+
+    axis.innerHTML = '<span>' + current.labels[0] + '</span><span>' + current.labels[n-1] + '</span>';
+    valorEl.textContent = fmt(vals[n-1]);
+    var diff = vals[n-1] - vals[0];
+    deltaEl.textContent = (diff >= 0 ? '+ ' : '− ') + fmt(Math.abs(diff)) + ' ' + current.deltaLabel;
+    deltaEl.className = 'delta tabular';
+
+    current._pts = pts;
+  }
+
+  buttons.forEach(function(btn){
+    btn.addEventListener('click', function(){
+      buttons.forEach(function(b){ b.classList.remove('active'); });
+      btn.classList.add('active');
+      render(btn.getAttribute('data-range'));
+      hideTip();
+    });
+  });
+
+  function hideTip(){
+    crossLine.setAttribute('opacity', 0);
+    crossDot.setAttribute('opacity', 0);
+    tip.classList.remove('show');
+  }
+
+  function pointerToData(clientX){
+    var rect = svg.getBoundingClientRect();
+    var ratio = (clientX - rect.left) / rect.width;
+    ratio = Math.max(0, Math.min(1, ratio));
+    var n = current.values.length;
+    var idx = Math.round(ratio * (n - 1));
+    return idx;
+  }
+
+  function showTip(clientX){
+    if(!current) return;
+    var idx = pointerToData(clientX);
+    var p = current._pts[idx];
+    var rect = svg.getBoundingClientRect();
+    crossLine.setAttribute('x1', p[0]); crossLine.setAttribute('x2', p[0]);
+    crossLine.setAttribute('y1', padTop); crossLine.setAttribute('y2', H - padBottom + 4);
+    crossLine.setAttribute('opacity', 1);
+    crossDot.setAttribute('cx', p[0]); crossDot.setAttribute('cy', p[1]);
+    crossDot.setAttribute('opacity', 1);
+
+    var pxRatio = rect.width / W;
+    var leftPx = p[0] * pxRatio;
+    tip.style.left = leftPx + 'px';
+    tip.innerHTML = current.labels[idx] + ' &middot; <b>' + fmt(current.values[idx]) + '</b>';
+    tip.classList.add('show');
+  }
+
+  wrap.addEventListener('pointermove', function(e){ showTip(e.clientX); });
+  wrap.addEventListener('pointerleave', hideTip);
+  wrap.addEventListener('touchstart', function(e){ if(e.touches[0]) showTip(e.touches[0].clientX); }, {passive:true});
+
+  render('1m');
+})();
+
+(function(){
+  var STORAGE_KEY = 'wealthos-theme';
+  var root = document.documentElement;
+  var toggle = document.getElementById('themeToggle');
+  var iconSun = toggle.querySelector('.icon-sun');
+  var iconMoon = toggle.querySelector('.icon-moon');
+  var media = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function systemPrefersDark(){ return media.matches; }
+
+  function storedTheme(){
+    try { return localStorage.getItem(STORAGE_KEY); } catch(e){ return null; }
+  }
+
+  function resolvedTheme(){
+    var stored = storedTheme();
+    if(stored === 'light' || stored === 'dark') return stored;
+    return systemPrefersDark() ? 'dark' : 'light';
+  }
+
+  function applyTheme(theme){
+    root.setAttribute('data-theme', theme);
+    var isDark = theme === 'dark';
+    iconSun.hidden = !isDark;
+    iconMoon.hidden = isDark;
+    toggle.setAttribute('aria-pressed', String(isDark));
+    toggle.setAttribute('aria-label', isDark ? 'Activar modo claro' : 'Activar modo oscuro');
+  }
+
+  toggle.addEventListener('click', function(){
+    var next = resolvedTheme() === 'dark' ? 'light' : 'dark';
+    try { localStorage.setItem(STORAGE_KEY, next); } catch(e){}
+    applyTheme(next);
+  });
+
+  media.addEventListener('change', function(e){
+    if(!storedTheme()) applyTheme(e.matches ? 'dark' : 'light');
+  });
+
+  applyTheme(resolvedTheme());
+})();
+
+(function(){
+  var navButtons = document.querySelectorAll('.bottom-nav button, .top-nav button');
+  var screens = document.querySelectorAll('.screen');
+
+  function goTo(name){
+    screens.forEach(function(s){ s.hidden = (s.id !== 'screen-' + name); });
+    navButtons.forEach(function(b){
+      var active = b.getAttribute('data-screen') === name;
+      b.classList.toggle('active', active);
+      if(active){ b.setAttribute('aria-current', 'page'); } else { b.removeAttribute('aria-current'); }
+    });
+    window.scrollTo(0, 0);
+  }
+
+  navButtons.forEach(function(btn){
+    btn.addEventListener('click', function(){ goTo(btn.getAttribute('data-screen')); });
+  });
+
+  document.querySelectorAll('[data-goto]').forEach(function(el){
+    el.addEventListener('click', function(){ goTo(el.getAttribute('data-goto')); });
+  });
+})();
+</script>
