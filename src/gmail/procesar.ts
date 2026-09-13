@@ -29,7 +29,7 @@ async function obtenerCategoriaIdPorNombre(): Promise<Map<string, number>> {
  * scripts/rebuild-cuentas-bcp.ts hace en lote desde un array fijo de
  * correos históricos.
  */
-export async function procesarCorreo(email: RawEmail): Promise<ResultadoIngesta> {
+export async function procesarCorreo(email: RawEmail, gmailMessageId?: string): Promise<ResultadoIngesta> {
   let parsed = null;
   if (bcpParser.puedeParsear(email)) parsed = bcpParser.parsear(email);
   else if (interbankParser.puedeParsear(email)) parsed = interbankParser.parsear(email);
@@ -92,6 +92,7 @@ export async function procesarCorreo(email: RawEmail): Promise<ResultadoIngesta>
       cuentaDestinoId,
       fuente: "email",
       correoRaw: email.body,
+      gmailMessageId: gmailMessageId ?? null,
     })
     .onConflictDoNothing()
     .returning();

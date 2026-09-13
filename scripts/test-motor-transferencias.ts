@@ -18,6 +18,7 @@ function tx(overrides: Partial<Transaccion>): Transaccion {
     cuentaDestinoId: null,
     fuente: "email",
     correoRaw: null,
+    gmailMessageId: null,
     createdAt: "",
     ...overrides,
   };

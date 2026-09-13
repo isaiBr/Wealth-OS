@@ -4,15 +4,19 @@ import { identificadoresCuenta } from "@/db/schema";
 
 // Movidas acá desde scripts/rebuild-cuentas-bcp.ts para que el webhook en
 // vivo use la misma extracción de dígitos que el script de carga a mano.
+// El "\s*" antes de "\*+" tolera los espacios de alineación que deja la
+// conversión HTML->texto de las tablas (dataTable) del correo en vivo — el
+// texto copiado a mano de correos-septiembre.ts no los trae, pero \s*
+// también matchea cero espacios, así que ambos formatos siguen funcionando.
 export function extraerDigitosOrigen(body: string): string | null {
   const m =
-    body.match(/Desde\s+[^\n]+\n\*+\s*(\d{4})/i) ??
-    body.match(/Cuenta de origen:?\s*[^\n]+\n\*+\s*(\d{4})/i);
+    body.match(/Desde\s+[^\n]+\n\s*\*+\s*(\d{4})/i) ??
+    body.match(/Cuenta de origen:?\s*[^\n]+\n\s*\*+\s*(\d{4})/i);
   return m?.[1] ?? null;
 }
 
 export function extraerDigitosDestino(body: string): string | null {
-  const m = body.match(/Enviado a\s+[^\n]+\n\*+\s*(\d{4})/i);
+  const m = body.match(/Enviado a\s+[^\n]+\n\s*\*+\s*(\d{4})/i);
   return m?.[1] ?? null;
 }
 

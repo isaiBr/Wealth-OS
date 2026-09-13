@@ -29,6 +29,13 @@
       "when": 1789329479185,
       "tag": "0003_parched_justice",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789336185668,
+      "tag": "0004_amazing_vivisector",
+      "breakpoints": true
     }
   ]
 }

@@ -87,6 +87,12 @@ export const transacciones = sqliteTable(
     cuentaDestinoId: integer("cuenta_destino_id").references(() => cuentas.id),
     fuente: text("fuente").notNull(), // 'email' | 'manual'
     correoRaw: text("correo_raw"), // cuerpo original, para depurar el parser
+    // Dedupe real para correos que no traen número de operación (ej. los
+    // "consumo con tarjeta" de Interbank) — sin esto, cada reprocesamiento
+    // del mismo mensaje (reintento del webhook, backfill manual) insertaba
+    // un duplicado. Null para las transacciones que no vinieron de un
+    // mensaje de Gmail real (carga histórica, manuales).
+    gmailMessageId: text("gmail_message_id"),
     createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
   },
   (table) => [
@@ -94,6 +100,7 @@ export const transacciones = sqliteTable(
     // devolución (son el mismo "evento" visto dos veces) — el dedupe real
     // es por (número de operación + tipo), no por número de operación solo.
     uniqueIndex("transacciones_numero_operacion_tipo_idx").on(table.numeroOperacion, table.tipo),
+    uniqueIndex("transacciones_gmail_message_id_idx").on(table.gmailMessageId),
   ]
 );
 

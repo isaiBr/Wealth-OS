@@ -24,6 +24,18 @@ function header(payload: gmail_v1.Schema$MessagePart | undefined, nombre: string
 }
 
 /**
+ * html-to-text representa <b>/<strong> como *texto* (un solo asterisco a
+ * cada lado) — eso se mete en medio de los valores que buscan los parsers
+ * (ej. "Fecha y hora *12 de Septiembre...*"). Se quita solo el asterisco
+ * "suelto" (no precedido/seguido de otro asterisco), así el enmascarado de
+ * cuentas/tarjetas ("**** 1051", "*** **5 088") no se toca — ahí todos los
+ * asteriscos están pegados entre sí, nunca sueltos.
+ */
+function quitarNegritaMarkdown(texto: string): string {
+  return texto.replace(/(?<!\*)\*(?!\*)([^*\n]+?)(?<!\*)\*(?!\*)/g, "$1");
+}
+
+/**
  * Convierte un mensaje de la Gmail API al RawEmail que esperan los parsers.
  * Los parsers se escribieron contra el texto tal como se ve al copiar el
  * correo renderizado en Gmail (ver scripts/data/correos-septiembre.ts) —
@@ -46,8 +58,15 @@ export function mensajeARawEmail(message: gmail_v1.Schema$Message): RawEmail | n
   const parteHtml = encontrarParte(payload, "text/html");
   if (parteHtml?.body?.data) {
     const html = decodeBase64Url(parteHtml.body.data);
-    const texto = convert(html, { wordwrap: false });
-    return { from, subject, body: texto };
+    // format: "dataTable" fuerza una fila de tabla por línea — sin esto,
+    // html-to-text junta todas las filas de "Datos de la operación" en una
+    // sola línea, y los parsers (que buscan cada label al inicio de línea)
+    // no reconocen nada.
+    const texto = convert(html, {
+      wordwrap: false,
+      selectors: [{ selector: "table", format: "dataTable" }],
+    });
+    return { from, subject, body: quitarNegritaMarkdown(texto) };
   }
 
   return null;

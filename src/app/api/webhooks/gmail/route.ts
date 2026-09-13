@@ -69,7 +69,7 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        const resultado = await procesarCorreo(rawEmail);
+        const resultado = await procesarCorreo(rawEmail, id);
         if (resultado.estado === "insertada") resultados.insertadas++;
         else if (resultado.estado === "duplicada") resultados.duplicadas++;
         else resultados.omitidas++;
