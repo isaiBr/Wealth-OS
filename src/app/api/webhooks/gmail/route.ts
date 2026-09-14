@@ -47,6 +47,15 @@ export async function POST(request: NextRequest) {
   const idsVistos = new Set<string>();
   const resultados = { insertadas: 0, omitidas: 0, duplicadas: 0 };
 
+  // El historyId de la notificación push puede ir por delante de lo que
+  // history.list ya tiene indexado (retraso de propagación de Gmail) — si
+  // guardáramos ese valor como nuevo punto de partida, un correo que llegó
+  // casi al mismo tiempo (p.ej. dos consumos seguidos con la tarjeta) podría
+  // no aparecer todavía en este list() y quedaría saltado para siempre. Por
+  // eso el nuevo checkpoint se toma del propio historyId que devuelve
+  // history.list (lo que realmente se procesó), no del payload.
+  let historyIdProcesado: string | null = null;
+
   let pageToken: string | undefined;
   do {
     const { data } = await gmail.users.history.list({
@@ -55,6 +64,8 @@ export async function POST(request: NextRequest) {
       historyTypes: ["messageAdded"],
       pageToken,
     });
+
+    if (data.historyId) historyIdProcesado = data.historyId;
 
     for (const registro of data.history ?? []) {
       for (const agregado of registro.messagesAdded ?? []) {
@@ -84,7 +95,7 @@ export async function POST(request: NextRequest) {
     await ejecutarMotorTransferencias(mesActual);
   }
 
-  await db.insert(gmailSyncState).values({ historyId: historyIdNuevo });
+  await db.insert(gmailSyncState).values({ historyId: historyIdProcesado ?? historyIdNuevo });
 
   return NextResponse.json({ ok: true, ...resultados });
 }
