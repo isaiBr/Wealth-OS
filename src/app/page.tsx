@@ -17,12 +17,37 @@ export const dynamic = "force-dynamic";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const BUCKETS: { clave: string; nombre: string; color: string }[] = [
-  { clave: "fijos", nombre: "Costos fijos", color: "var(--ink)" },
-  { clave: "inversion", nombre: "Inversiones", color: "var(--accent)" },
-  { clave: "ahorro", nombre: "Ahorro", color: "var(--cat-3)" },
-  { clave: "libre", nombre: "Gasto libre", color: "var(--warn)" },
+const BUCKETS: { clave: string; nombre: string; color: string; descripcion: string }[] = [
+  { clave: "fijos", nombre: "Costos fijos", color: "var(--ink)", descripcion: "Vivienda, servicios, deudas" },
+  { clave: "inversion", nombre: "Inversiones", color: "var(--accent)", descripcion: "Aportes de inversión" },
+  { clave: "ahorro", nombre: "Ahorro", color: "var(--cat-3)", descripcion: "Fondo de emergencia y metas" },
+  { clave: "libre", nombre: "Gasto libre", color: "var(--warn)", descripcion: "Sin culpa: salidas, gustos, hobbies" },
 ];
+
+const ICONO_SUSCRIPCIONES = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12a9 9 0 1 1-3-6.7" />
+    <path d="M21 3v6h-6" />
+  </svg>
+);
+const ICONO_CUOTAS = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M12 2 2 7l10 5 10-5-10-5Z" />
+    <path d="M2 17l10 5 10-5" />
+    <path d="M2 12l10 5 10-5" />
+  </svg>
+);
+const ICONO_DEUDA = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <path d="M8 12h8" />
+  </svg>
+);
+const ICONO_ALERTA = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6">
+    <path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" />
+  </svg>
+);
 
 function mesActual(): string {
   return new Date().toISOString().slice(0, 7);
@@ -211,21 +236,27 @@ export default async function InicioPage() {
       <div className="stats-label">Compromisos recurrentes</div>
       <div className="commit-row">
         <Link href="/presupuesto" className="commit-chip">
-          <div className="commit-icon" aria-hidden="true" />
+          <div className="commit-icon" aria-hidden="true">
+            {ICONO_SUSCRIPCIONES}
+          </div>
           <div className="commit-body">
             <span className="commit-label">Suscripciones</span>
             <span className="commit-val tabular">S/ 0.00</span>
           </div>
         </Link>
         <Link href="/presupuesto" className="commit-chip">
-          <div className="commit-icon" aria-hidden="true" />
+          <div className="commit-icon" aria-hidden="true">
+            {ICONO_CUOTAS}
+          </div>
           <div className="commit-body">
             <span className="commit-label">Cuotas activas</span>
             <span className="commit-val tabular">S/ {totalCuotas.toFixed(2)}</span>
           </div>
         </Link>
         <Link href="/cuentas" className={`commit-chip${totalDeuda > 0 ? " warn" : ""}`}>
-          <div className="commit-icon" aria-hidden="true" />
+          <div className="commit-icon" aria-hidden="true">
+            {ICONO_DEUDA}
+          </div>
           <div className="commit-body">
             <span className="commit-label">Deuda pendiente</span>
             <span className="commit-val tabular">S/ {totalDeuda.toFixed(2)}</span>
@@ -233,6 +264,8 @@ export default async function InicioPage() {
         </Link>
       </div>
 
+      <div className="dashboard-grid">
+      <div className="col-main">
       {gastoPorCategoria.length > 0 && (
         <>
           <div className="section-head">
@@ -301,8 +334,13 @@ export default async function InicioPage() {
                       <div className={`cat-bar-fill ${estado}`} style={{ width: `${Math.min(100, pctUsado ?? 0)}%` }} />
                     </div>
                   )}
-                  {estado === "over" && <div className="cat-flag over">Pasaste el límite este mes</div>}
-                  {estado === "warn" && <div className="cat-flag warn">Cerca del límite</div>}
+                  {estado === "over" && categoria.limiteMensual !== null && (
+                    <div className="cat-flag over">
+                      {ICONO_ALERTA}
+                      S/ {FORMATO.format(gasto - categoria.limiteMensual)} sobre el presupuesto
+                    </div>
+                  )}
+                  {estado === "warn" && <div className="cat-flag warn">{ICONO_ALERTA}Cerca del límite</div>}
                   {sinMovimiento && <div className="cat-zero-note">Sin movimiento este mes</div>}
                 </div>
               );
@@ -326,11 +364,12 @@ export default async function InicioPage() {
               <span className="dot" style={{ background: b.color }} />
               <div className="info">
                 <div className="nombre">{b.nombre}</div>
+                <div className="meta">{b.descripcion}</div>
                 <div className="bar-track">
                   <div className="bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: b.color }} />
                 </div>
               </div>
-              <div className="pct tabular">S/ {FORMATO.format(monto)}</div>
+              <div className="pct tabular">{pct.toFixed(0)}%</div>
             </div>
           );
         })}
@@ -358,7 +397,9 @@ export default async function InicioPage() {
                       {t.comercio || "(sin descripción)"}
                     </span>
                     <div className="tx-meta">
-                      {cuenta && <span className="banco-tag">{cuenta.banco.slice(0, 3).toUpperCase()}</span>}
+                      {cuenta && (
+                        <span className={`banco-tag tag-${cuenta.banco}`}>{cuenta.banco.slice(0, 3).toUpperCase()}</span>
+                      )}
                       <span className="tx-hours">{formatHora(t.fecha)}</span>
                       {t.esTransferenciaInterna ? (
                         <span className="tx-cat-pill transfer">Transferencia interna</span>
@@ -376,7 +417,9 @@ export default async function InicioPage() {
           })
         )}
       </div>
+      </div>
 
+      <div className="col-side">
       <div className="section-head with-action">
         <div className="section-title">Cuentas</div>
         <Link href="/cuentas" className="text-link">
@@ -394,7 +437,7 @@ export default async function InicioPage() {
           destacadas.map(({ cuenta, saldo }) => (
             <div className="cuenta" key={cuenta.id}>
               <div className="banco">
-                <span className="banco-tag">{cuenta.banco.slice(0, 3).toUpperCase()}</span>
+                <span className={`banco-tag tag-${cuenta.banco}`}>{cuenta.banco.slice(0, 3).toUpperCase()}</span>
                 <div className="cuenta-info">
                   <div className="nombre-cuenta">
                     {cuenta.nombre}
@@ -406,6 +449,8 @@ export default async function InicioPage() {
             </div>
           ))
         )}
+      </div>
+      </div>
       </div>
     </div>
   );

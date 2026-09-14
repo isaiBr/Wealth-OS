@@ -576,6 +576,17 @@ button {
   font-size: 16px;
   flex-shrink: 0;
 }
+.plan-row .bar-track {
+  height: 5px;
+  background: var(--surface-sunken);
+  border-radius: 3px;
+  margin-top: 7px;
+  overflow: hidden;
+}
+.plan-row .bar-fill {
+  height: 100%;
+  border-radius: 3px;
+}
 
 /* ---------- cuentas ---------- */
 .cuentas {
@@ -607,6 +618,19 @@ button {
   flex-shrink: 0;
   background: var(--accent-strong);
 }
+/* Colores reales de marca (el mockup los tenía cruzados) — BCP es azul/turquesa, Interbank es verde. */
+.tag-bcp {
+  background: #00558c;
+}
+.tag-interbank,
+.tag-ibk {
+  background: #0a5c36;
+}
+.tag-pichincha,
+.tag-pic {
+  background: #ffc20e;
+  color: #3a2e00;
+}
 .wallet-tag {
   font-size: 9px;
   font-weight: 700;
@@ -614,6 +638,7 @@ button {
   padding: 2px 6px;
   border-radius: 5px;
   flex-shrink: 0;
+  margin-left: 6px;
 }
 .tag-yape {
   background: #742284;
@@ -761,6 +786,59 @@ button {
   margin-top: 6px;
   padding-bottom: 2px;
   line-height: 1.4;
+}
+
+/* ---------- gasto hormiga ---------- */
+.hormiga-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 4px;
+}
+.hormiga-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12.5px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+}
+.hormiga-row:last-of-type {
+  border-bottom: none;
+}
+.hormiga-row .n {
+  color: var(--ink-muted);
+}
+.hormiga-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 12px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+}
+.hormiga-total .label {
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.hormiga-total .valor {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 15px;
+}
+.hormiga-annual {
+  margin-top: 10px;
+  background: var(--warn-soft);
+  color: var(--warn);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.hormiga-annual b {
+  font-family: var(--font-serif), Georgia, serif;
+  font-size: 18px;
+  display: block;
+  margin-bottom: 2px;
+  color: var(--warn);
 }
 
 /* ---------- transacciones ---------- */
@@ -970,6 +1048,11 @@ button {
 }
 .cat-flag.over {
   color: var(--danger);
+}
+.cat-flag svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
 }
 .cat-zero-note {
   font-size: 11px;

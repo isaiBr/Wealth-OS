@@ -47,6 +47,9 @@ export default async function CuentasPage() {
                   <div className="debt-head">
                     <span className="debt-name">{d.cuenta.nombre}</span>
                   </div>
+                  <div className="debt-bar-track">
+                    <div className="debt-bar-fill" style={{ width: "100%" }} />
+                  </div>
                   <div className="debt-meta">
                     <span>Pendiente</span>
                     <span className="tabular">S/ {FORMATO.format(d.saldo)}</span>

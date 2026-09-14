@@ -7,6 +7,12 @@ import type { FilaPresupuesto } from "@/db/queries";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+const ICONO_ALERTA = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6">
+    <path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" />
+  </svg>
+);
+
 function estadoBarra(pct: number | null): "" | "warn" | "over" {
   if (pct === null) return "";
   if (pct >= 100) return "over";
@@ -55,8 +61,13 @@ export function PresupuestoView({ filas, sinCategorizar }: { filas: FilaPresupue
                   />
                 </div>
               )}
-              {estado === "over" && <div className="cat-flag over">Pasaste el límite este mes</div>}
-              {estado === "warn" && <div className="cat-flag warn">Cerca del límite</div>}
+              {estado === "over" && categoria.limiteMensual !== null && (
+                <div className="cat-flag over">
+                  {ICONO_ALERTA}
+                  S/ {FORMATO.format(gasto - categoria.limiteMensual)} sobre el presupuesto
+                </div>
+              )}
+              {estado === "warn" && <div className="cat-flag warn">{ICONO_ALERTA}Cerca del límite</div>}
               {sinMovimiento && <div className="cat-zero-note">Sin movimiento este mes</div>}
             </div>
           );

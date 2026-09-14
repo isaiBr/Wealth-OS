@@ -1,15 +1,16 @@
-import { agruparPorBucket, cuotasActivas, presupuestoPorCategoria } from "@/db/queries";
+import { agruparPorBucket, cuotasActivas, gastoHormigaAnualizado, presupuestoPorCategoria } from "@/db/queries";
 import { PresupuestoView } from "./PresupuestoView";
+import { CuotasView } from "./CuotasView";
 
 export const dynamic = "force-dynamic";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const BUCKETS: { clave: string; nombre: string; color: string }[] = [
-  { clave: "fijos", nombre: "Costos fijos", color: "var(--ink)" },
-  { clave: "inversion", nombre: "Inversiones", color: "var(--accent)" },
-  { clave: "ahorro", nombre: "Ahorro", color: "var(--cat-3)" },
-  { clave: "libre", nombre: "Gasto libre", color: "var(--warn)" },
+const BUCKETS: { clave: string; nombre: string; color: string; descripcion: string }[] = [
+  { clave: "fijos", nombre: "Costos fijos", color: "var(--ink)", descripcion: "Vivienda, servicios, deudas" },
+  { clave: "inversion", nombre: "Inversiones", color: "var(--accent)", descripcion: "Aportes de inversión" },
+  { clave: "ahorro", nombre: "Ahorro", color: "var(--cat-3)", descripcion: "Fondo de emergencia y metas" },
+  { clave: "libre", nombre: "Gasto libre", color: "var(--warn)", descripcion: "Sin culpa: salidas, gustos, hobbies" },
 ];
 
 function mesActual(): string {
@@ -19,6 +20,7 @@ function mesActual(): string {
 export default async function PresupuestoPage() {
   const { filas, sinCategorizar } = await presupuestoPorCategoria(mesActual());
   const { filas: cuotas, totalMensual: totalCuotas } = await cuotasActivas();
+  const hormiga = await gastoHormigaAnualizado(mesActual());
   const porBucket = agruparPorBucket(filas);
   const gastoDelMes = filas.reduce((acc, f) => acc + f.gasto, 0);
 
@@ -43,11 +45,12 @@ export default async function PresupuestoPage() {
                   <span className="dot" style={{ background: b.color }} />
                   <div className="info">
                     <div className="nombre">{b.nombre}</div>
+                    <div className="meta">{b.descripcion}</div>
                     <div className="bar-track">
                       <div className="bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: b.color }} />
                     </div>
                   </div>
-                  <div className="pct tabular">S/ {FORMATO.format(monto)}</div>
+                  <div className="pct tabular">{pct.toFixed(0)}%</div>
                 </div>
               );
             })}
@@ -60,6 +63,35 @@ export default async function PresupuestoPage() {
         </div>
 
         <div className="col-side">
+          {hormiga.totalMes > 0 && (
+            <>
+              <div className="section-head">
+                <div>
+                  <div className="section-title">Gasto hormiga anualizado</div>
+                  <div className="section-sub">Lo chico también cuenta — proyectado a 12 meses</div>
+                </div>
+              </div>
+              <div className="card">
+                <div className="hormiga-list">
+                  {hormiga.porCategoria.slice(0, 5).map((h) => (
+                    <div className="hormiga-row" key={h.nombre}>
+                      <span className="n">{h.nombre}</span>
+                      <span className="tabular">S/ {FORMATO.format(h.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="hormiga-total">
+                  <span className="label">Total este mes</span>
+                  <span className="valor tabular">S/ {FORMATO.format(hormiga.totalMes)}</span>
+                </div>
+                <div className="hormiga-annual">
+                  <b className="tabular">S/ {FORMATO.format(hormiga.proyeccionAnual)} / año</b>
+                  si mantienes este ritmo en compras menores a S/ 20.
+                </div>
+              </div>
+            </>
+          )}
+
           <div className="section-head">
             <div className="section-title">Suscripciones</div>
           </div>
@@ -74,38 +106,12 @@ export default async function PresupuestoPage() {
             <div className="section-title">Cuotas activas</div>
           </div>
           <div className="card">
-            {cuotas.length === 0 ? (
-              <p className="empty-note">Sin compras en cuotas detectadas este mes.</p>
-            ) : (
-              <>
-                {cuotas.map((c) => {
-                  const pct = (c.cuotasPagadas / c.totalCuotas) * 100;
-                  return (
-                    <div className="cuota-row" key={c.id}>
-                      <div className="cuota-top">
-                        <span className="comercio">{c.comercio}</span>
-                        <span className="monto tabular">S/ {FORMATO.format(c.montoCuota)}/mes</span>
-                      </div>
-                      <div className="cuota-meta">
-                        <div className="cuota-progress">
-                          <i style={{ width: `${pct}%` }} />
-                        </div>
-                        <span className="n">
-                          cuota {c.cuotasPagadas + 1}/{c.totalCuotas}
-                        </span>
-                      </div>
-                    </div>
-                  );
-                })}
-                <div className="cuota-total">
-                  <span>Total en cuotas este mes</span>
-                  <span className="valor tabular">S/ {FORMATO.format(totalCuotas)}</span>
-                </div>
-                <p className="cuota-note">
-                  Se marcan pagadas automáticamente al detectar el pago de la tarjeta, o a mano si el correo no llega
-                  (todavía no implementado).
-                </p>
-              </>
+            <CuotasView cuotas={cuotas} totalMensual={totalCuotas} />
+            {cuotas.length > 0 && (
+              <p className="cuota-note">
+                Se marcan pagadas automáticamente al detectar el pago de la tarjeta, o a mano con el check si el
+                correo no llega.
+              </p>
             )}
           </div>
         </div>

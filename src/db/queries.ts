@@ -336,6 +336,55 @@ export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMens
   return { filas: filasConNombre, totalMensual };
 }
 
+export async function marcarCuotaPagada(cuotaId: number) {
+  const cuota = await db.select().from(comprasCuotas).where(eq(comprasCuotas.id, cuotaId)).get();
+  if (!cuota || cuota.cuotasPagadas >= cuota.totalCuotas) return;
+  await db
+    .update(comprasCuotas)
+    .set({ cuotasPagadas: cuota.cuotasPagadas + 1 })
+    .where(eq(comprasCuotas.id, cuotaId));
+}
+
+// Umbral bajo el cual una compra cuenta como "gasto hormiga" — pequeños
+// consumos que por separado no pesan pero suman fuerte proyectados al año.
+const UMBRAL_GASTO_HORMIGA = 20;
+
+export interface GastoHormiga {
+  porCategoria: { nombre: string; monto: number }[];
+  totalMes: number;
+  proyeccionAnual: number;
+}
+
+export async function gastoHormigaAnualizado(mes: string): Promise<GastoHormiga> {
+  const { desde, hasta } = rangoMes(mes);
+  const filas = await db
+    .select()
+    .from(transacciones)
+    .where(
+      and(
+        gte(transacciones.fecha, desde),
+        lt(transacciones.fecha, hasta),
+        eq(transacciones.tipo, "compra"),
+        eq(transacciones.esTransferenciaInterna, false),
+        lt(transacciones.monto, UMBRAL_GASTO_HORMIGA)
+      )
+    );
+
+  const todasCategorias = await listarCategorias();
+  const categoriaPorId = new Map(todasCategorias.map((c) => [c.id, c]));
+  const porCategoriaMap = new Map<string, number>();
+  for (const f of filas) {
+    const nombre = (f.categoriaId && categoriaPorId.get(f.categoriaId)?.nombre) || "Sin categoría";
+    porCategoriaMap.set(nombre, (porCategoriaMap.get(nombre) ?? 0) + f.monto);
+  }
+  const porCategoria = [...porCategoriaMap.entries()]
+    .map(([nombre, monto]) => ({ nombre, monto }))
+    .sort((a, b) => b.monto - a.monto);
+
+  const totalMes = filas.reduce((acc, f) => acc + f.monto, 0);
+  return { porCategoria, totalMes, proyeccionAnual: totalMes * 12 };
+}
+
 export interface DeudaPendiente {
   cuenta: Cuenta;
   saldo: number;

@@ -67,7 +67,7 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
               >
                 {c.destacada ? "★" : "☆"}
               </button>
-              <span className="banco-tag">{c.banco.slice(0, 3).toUpperCase()}</span>
+              <span className={`banco-tag tag-${c.banco}`}>{c.banco.slice(0, 3).toUpperCase()}</span>
               <div className="cuenta-info">
                 <div className="nombre-cuenta">
                   {c.nombre}

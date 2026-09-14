@@ -92,7 +92,9 @@ export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
                         {t.comercio || "(sin descripción)"}
                       </button>
                       <div className="tx-meta">
-                        {cuenta && <span className="banco-tag">{cuenta.banco.slice(0, 3).toUpperCase()}</span>}
+                        {cuenta && (
+                          <span className={`banco-tag tag-${cuenta.banco}`}>{cuenta.banco.slice(0, 3).toUpperCase()}</span>
+                        )}
                         <span className="tx-hours">{formatHora(t.fecha)}</span>
                         {t.esTransferenciaInterna ? (
                           <span className="tx-cat-pill transfer">Transferencia interna</span>

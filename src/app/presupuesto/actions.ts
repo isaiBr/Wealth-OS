@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { editarLimiteCategoria } from "@/db/queries";
+import { editarLimiteCategoria, marcarCuotaPagada } from "@/db/queries";
 
 export async function editarLimiteAction(formData: FormData) {
   const categoriaId = Number(formData.get("categoriaId"));
@@ -13,6 +13,12 @@ export async function editarLimiteAction(formData: FormData) {
   }
 
   await editarLimiteCategoria(categoriaId, limiteMensual);
+  revalidatePath("/presupuesto");
+  revalidatePath("/");
+}
+
+export async function marcarCuotaPagadaAction(cuotaId: number) {
+  await marcarCuotaPagada(cuotaId);
   revalidatePath("/presupuesto");
   revalidatePath("/");
 }
