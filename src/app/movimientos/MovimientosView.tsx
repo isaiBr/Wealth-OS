@@ -13,6 +13,10 @@ interface Props {
 const FORMATO_DIA = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short" });
 const FORMATO_MONTO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
+function formatHora(fechaIso: string): string {
+  return new Date(fechaIso).toLocaleTimeString("es-PE", { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
 function etiquetaDia(fechaISO: string): string {
   const fecha = new Date(fechaISO);
   const hoy = new Date();
@@ -89,6 +93,7 @@ export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
                       </button>
                       <div className="tx-meta">
                         {cuenta && <span className="banco-tag">{cuenta.banco.slice(0, 3).toUpperCase()}</span>}
+                        <span className="tx-hours">{formatHora(t.fecha)}</span>
                         {t.esTransferenciaInterna ? (
                           <span className="tx-cat-pill transfer">Transferencia interna</span>
                         ) : (

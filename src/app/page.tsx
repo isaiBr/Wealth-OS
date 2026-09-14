@@ -35,6 +35,10 @@ function estadoBarra(pct: number | null): "" | "warn" | "over" {
   return "";
 }
 
+function formatHora(fechaIso: string): string {
+  return new Date(fechaIso).toLocaleTimeString("es-PE", { hour: "numeric", minute: "2-digit", hour12: true });
+}
+
 export default async function InicioPage() {
   const mes = mesActual();
   const cuentas = await listarCuentas();
@@ -49,8 +53,26 @@ export default async function InicioPage() {
   const { filas: presupuesto, sinCategorizar } = await presupuestoPorCategoria(mes);
   const insights = evaluarInsights({ presupuesto, sinCategorizar, resumen });
   const categorias = await listarCategorias();
+  const cuentaPorId = new Map(cuentas.map((c) => [c.id, c]));
+  const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
 
   const tasaAhorro = resumen.ingresos > 0 ? ((resumen.ingresos - resumen.gastos) / resumen.ingresos) * 100 : null;
+
+  // --- Plan de gasto consciente (solo montos reales, sin meta) ---
+  const porBucket = agruparPorBucket(presupuesto);
+  const pctGastosFijos = resumen.gastos > 0 ? ((porBucket.fijos ?? 0) / resumen.gastos) * 100 : 0;
+
+  // --- Compromisos recurrentes ---
+  const { totalMensual: totalCuotas } = await cuotasActivas();
+  const deudas = await deudaPendiente();
+  const totalDeuda = deudas.reduce((acc, d) => acc + d.saldo, 0);
+
+  // "Fijos pendientes" (facturas fijas aún no cobradas este mes) queda en 0
+  // — no hay todavía un registro de gastos fijos recurrentes esperados con
+  // fecha; cuotas y apartado de ahorro sí son calculables con datos reales.
+  const fijosPendientes = 0;
+  const apartadoAhorro = porBucket.ahorro ?? 0;
+  const disponibleReal = saldoTotal - fijosPendientes - totalCuotas - apartadoAhorro;
 
   // --- Patrimonio neto: reconstruido de las transacciones, sin snapshots ---
   const patrimonio = await patrimonioHistorico(30);
@@ -73,13 +95,7 @@ export default async function InicioPage() {
     deltaPatrimonio = patrimonio[patrimonio.length - 1].valor - patrimonio[0].valor;
   }
 
-  // --- Compromisos recurrentes ---
-  const { totalMensual: totalCuotas } = await cuotasActivas();
-  const deudas = await deudaPendiente();
-  const totalDeuda = deudas.reduce((acc, d) => acc + d.saldo, 0);
-
   // --- Gasto por categoría (donut) ---
-  const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
   const gastoPorCategoria = [...resumen.porCategoria.entries()]
     .filter(([id, monto]) => id !== null && monto > 0)
     .map(([id, monto]) => ({ categoria: categoriaPorId.get(id as number), monto }))
@@ -98,21 +114,30 @@ export default async function InicioPage() {
   // --- Categorías a vigilar (mismo cálculo que Presupuesto, top 3) ---
   const aVigilar = presupuesto.slice(0, 3);
 
-  // --- Plan de gasto consciente (solo montos reales, sin meta) ---
-  const porBucket = agruparPorBucket(presupuesto);
-
   return (
     <div className="screen">
       <div className="hero-row">
         <div className="card hero-primary">
           <div className="hero-eyebrow">Cada sol tiene un trabajo asignado</div>
           <div className="label">Disponible real hoy</div>
-          <div className="valor tabular">S/ {saldoTotal.toFixed(2)}</div>
+          <div className="valor tabular">S/ {disponibleReal.toFixed(2)}</div>
           <div className="desglose">
             <div className="row">
               <span>En cuentas líquidas</span>
               <b className="tabular">S/ {saldoTotal.toFixed(2)}</b>
             </div>
+            {totalCuotas > 0 && (
+              <div className="row">
+                <span>− Cuotas de tarjeta este mes</span>
+                <b className="tabular">S/ {totalCuotas.toFixed(2)}</b>
+              </div>
+            )}
+            {apartadoAhorro > 0 && (
+              <div className="row">
+                <span>− Apartado para tu ahorro del mes</span>
+                <b className="tabular">S/ {apartadoAhorro.toFixed(2)}</b>
+              </div>
+            )}
           </div>
           {cuentas.length === 0 && (
             <p style={{ marginTop: 12, fontSize: 12, color: "var(--hero-muted)" }}>
@@ -178,8 +203,8 @@ export default async function InicioPage() {
           <div className="valor tabular">{tasaAhorro === null ? "—" : `${tasaAhorro.toFixed(0)}%`}</div>
         </div>
         <div className="stat">
-          <div className="label">Movimientos</div>
-          <div className="valor tabular">{resumen.total}</div>
+          <div className="label">Gastos fijos</div>
+          <div className="valor tabular">{pctGastosFijos.toFixed(0)}%</div>
         </div>
       </div>
 
@@ -211,7 +236,10 @@ export default async function InicioPage() {
       {gastoPorCategoria.length > 0 && (
         <>
           <div className="section-head">
-            <div className="section-title">Gasto por categoría</div>
+            <div>
+              <div className="section-title">Gasto por categoría</div>
+              <div className="section-sub">S/ {FORMATO.format(totalCategorizado)} en total este mes</div>
+            </div>
           </div>
           <div className="card chart-card">
             <div className="donut-row">
@@ -237,7 +265,9 @@ export default async function InicioPage() {
                   <div className="legend-item" key={a.categoria.id}>
                     <span className="legend-dot" style={{ background: a.color }} />
                     <span className="nombre">{a.categoria.nombre}</span>
-                    <span className="pct">{totalCategorizado > 0 ? ((a.monto / totalCategorizado) * 100).toFixed(0) : 0}%</span>
+                    <span className="pct">
+                      {totalCategorizado > 0 ? ((a.monto / totalCategorizado) * 100).toFixed(0) : 0}% · S/ {FORMATO.format(a.monto)}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -316,20 +346,34 @@ export default async function InicioPage() {
         {recientes.length === 0 ? (
           <p className="empty-note">Sin movimientos este mes todavía.</p>
         ) : (
-          recientes.map((t) => (
-            <div className="tx" key={t.id}>
-              <div className="tx-left">
-                <div className="tx-info">
-                  <span className="tx-merchant" style={{ cursor: "default" }}>
-                    {t.comercio || "(sin descripción)"}
-                  </span>
+          recientes.map((t) => {
+            const cuenta = cuentaPorId.get(t.cuentaId);
+            const categoria = t.categoriaId ? categoriaPorId.get(t.categoriaId) : undefined;
+            const esIngreso = t.tipo === "ingreso" || t.tipo === "devolucion";
+            return (
+              <div className={`tx${t.esTransferenciaInterna ? " transfer" : ""}`} key={t.id}>
+                <div className="tx-left">
+                  <div className="tx-info">
+                    <span className="tx-merchant" style={{ cursor: "default" }}>
+                      {t.comercio || "(sin descripción)"}
+                    </span>
+                    <div className="tx-meta">
+                      {cuenta && <span className="banco-tag">{cuenta.banco.slice(0, 3).toUpperCase()}</span>}
+                      <span className="tx-hours">{formatHora(t.fecha)}</span>
+                      {t.esTransferenciaInterna ? (
+                        <span className="tx-cat-pill transfer">Transferencia interna</span>
+                      ) : (
+                        <span className="tx-cat-pill">{categoria?.nombre ?? "Sin categoría"}</span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className={`tx-amount tabular${esIngreso ? " income" : ""}`}>
+                  {esIngreso ? "+ " : "− "}S/ {t.monto.toFixed(2)}
                 </div>
               </div>
-              <div className={`tx-amount tabular${t.tipo === "ingreso" || t.tipo === "devolucion" ? " income" : ""}`}>
-                {t.tipo === "ingreso" || t.tipo === "devolucion" ? "+ " : "− "}S/ {t.monto.toFixed(2)}
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 
@@ -352,7 +396,10 @@ export default async function InicioPage() {
               <div className="banco">
                 <span className="banco-tag">{cuenta.banco.slice(0, 3).toUpperCase()}</span>
                 <div className="cuenta-info">
-                  <div className="nombre-cuenta">{cuenta.nombre}</div>
+                  <div className="nombre-cuenta">
+                    {cuenta.nombre}
+                    {cuenta.billetera && <span className={`wallet-tag tag-${cuenta.billetera}`}>{cuenta.billetera === "yape" ? "Yape" : "Plin"}</span>}
+                  </div>
                 </div>
               </div>
               <div className="saldo tabular">S/ {saldo.toFixed(2)}</div>

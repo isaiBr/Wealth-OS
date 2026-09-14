@@ -41,7 +41,9 @@ export function FondoEmergenciaView({
         ) : (
           <>
             <div className="meta-top">
-              <span>{fondo.cuenta.nombre}</span>
+              <span>
+                Meta: {fondo.metaMeses} {fondo.metaMeses === 1 ? "mes" : "meses"} de gastos fijos
+              </span>
               <span className="cifras tabular">
                 S/ {FORMATO.format(fondo.saldoActual)} {fondo.metaMonto > 0 ? `/ S/ ${FORMATO.format(fondo.metaMonto)}` : ""}
               </span>
@@ -52,8 +54,8 @@ export function FondoEmergenciaView({
                   <div className="meta-bar-fill" style={{ width: `${Math.min(100, (fondo.saldoActual / fondo.metaMonto) * 100)}%` }} />
                 </div>
                 <p className="meta-note">
-                  {Math.min(100, (fondo.saldoActual / fondo.metaMonto) * 100).toFixed(0)}% de tu meta de {fondo.metaMeses}{" "}
-                  {fondo.metaMeses === 1 ? "mes" : "meses"} de gastos fijos.
+                  {Math.min(100, (fondo.saldoActual / fondo.metaMonto) * 100).toFixed(0)}% completado · guardado en{" "}
+                  {fondo.cuenta.nombre}.
                 </p>
               </>
             ) : (

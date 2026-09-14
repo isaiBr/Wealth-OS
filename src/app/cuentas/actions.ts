@@ -1,7 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { crearCuenta, alternarDestacada, configurarFondoEmergencia } from "@/db/queries";
+import { crearCuenta, alternarDestacada, actualizarBilletera, configurarFondoEmergencia } from "@/db/queries";
 
 export async function crearCuentaAction(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -21,6 +21,18 @@ export async function crearCuentaAction(formData: FormData) {
 
 export async function alternarDestacadaAction(cuentaId: number, destacada: boolean) {
   await alternarDestacada(cuentaId, destacada);
+  revalidatePath("/cuentas");
+  revalidatePath("/");
+}
+
+export async function actualizarBilleteraAction(formData: FormData) {
+  const cuentaId = parseInt(String(formData.get("cuentaId") ?? ""), 10);
+  const valor = String(formData.get("billetera") ?? "");
+  const billetera = valor === "yape" || valor === "plin" ? valor : null;
+
+  if (Number.isNaN(cuentaId)) throw new Error("Cuenta inválida");
+
+  await actualizarBilletera(cuentaId, billetera);
   revalidatePath("/cuentas");
   revalidatePath("/");
 }

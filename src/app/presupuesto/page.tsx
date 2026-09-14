@@ -29,80 +29,86 @@ export default async function PresupuestoPage() {
         <div className="screen-sub">Ordenado por qué tan cerca está cada categoría de su límite.</div>
       </div>
 
-      <div className="section-head">
-        <div className="section-title">Plan de gasto consciente</div>
-      </div>
-      <div className="card">
-        {BUCKETS.map((b) => {
-          const monto = porBucket[b.clave] ?? 0;
-          const pct = gastoDelMes > 0 ? (monto / gastoDelMes) * 100 : 0;
-          return (
-            <div className="plan-row" key={b.clave}>
-              <span className="dot" style={{ background: b.color }} />
-              <div className="info">
-                <div className="nombre">{b.nombre}</div>
-                <div className="bar-track">
-                  <div className="bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: b.color }} />
-                </div>
-              </div>
-              <div className="pct tabular">S/ {FORMATO.format(monto)}</div>
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="section-head">
-        <div className="section-title">Presupuesto por categoría</div>
-      </div>
-      <PresupuestoView filas={filas} sinCategorizar={sinCategorizar} />
-
-      <div className="section-head">
-        <div className="section-title">Suscripciones</div>
-      </div>
-      <div className="card">
-        <p className="empty-note">
-          Todavía no se detectó ninguna — se sugieren solas cuando un mismo comercio y monto se repita ~mensualmente
-          (roadmap §8). Necesita al menos 2 meses de historial para detectar el patrón.
-        </p>
-      </div>
-
-      <div className="section-head">
-        <div className="section-title">Cuotas activas</div>
-      </div>
-      <div className="card">
-        {cuotas.length === 0 ? (
-          <p className="empty-note">Sin compras en cuotas detectadas este mes.</p>
-        ) : (
-          <>
-            {cuotas.map((c) => {
-              const pct = (c.cuotasPagadas / c.totalCuotas) * 100;
+      <div className="dashboard-grid">
+        <div className="col-main">
+          <div className="section-head">
+            <div className="section-title">Plan de gasto consciente</div>
+          </div>
+          <div className="card">
+            {BUCKETS.map((b) => {
+              const monto = porBucket[b.clave] ?? 0;
+              const pct = gastoDelMes > 0 ? (monto / gastoDelMes) * 100 : 0;
               return (
-                <div className="cuota-row" key={c.id}>
-                  <div className="cuota-top">
-                    <span className="comercio">{c.comercio}</span>
-                    <span className="monto tabular">S/ {FORMATO.format(c.montoCuota)}/mes</span>
-                  </div>
-                  <div className="cuota-meta">
-                    <div className="cuota-progress">
-                      <i style={{ width: `${pct}%` }} />
+                <div className="plan-row" key={b.clave}>
+                  <span className="dot" style={{ background: b.color }} />
+                  <div className="info">
+                    <div className="nombre">{b.nombre}</div>
+                    <div className="bar-track">
+                      <div className="bar-fill" style={{ width: `${Math.min(100, pct)}%`, background: b.color }} />
                     </div>
-                    <span className="n">
-                      cuota {c.cuotasPagadas + 1}/{c.totalCuotas}
-                    </span>
                   </div>
+                  <div className="pct tabular">S/ {FORMATO.format(monto)}</div>
                 </div>
               );
             })}
-            <div className="cuota-total">
-              <span>Total en cuotas este mes</span>
-              <span className="valor tabular">S/ {FORMATO.format(totalCuotas)}</span>
-            </div>
-            <p className="cuota-note">
-              Se marcan pagadas automáticamente al detectar el pago de la tarjeta, o a mano si el correo no llega
-              (todavía no implementado).
+          </div>
+
+          <div className="section-head">
+            <div className="section-title">Presupuesto por categoría</div>
+          </div>
+          <PresupuestoView filas={filas} sinCategorizar={sinCategorizar} />
+        </div>
+
+        <div className="col-side">
+          <div className="section-head">
+            <div className="section-title">Suscripciones</div>
+          </div>
+          <div className="card">
+            <p className="empty-note">
+              Todavía no se detectó ninguna — se sugieren solas cuando un mismo comercio y monto se repita
+              ~mensualmente (roadmap §8). Necesita al menos 2 meses de historial para detectar el patrón.
             </p>
-          </>
-        )}
+          </div>
+
+          <div className="section-head">
+            <div className="section-title">Cuotas activas</div>
+          </div>
+          <div className="card">
+            {cuotas.length === 0 ? (
+              <p className="empty-note">Sin compras en cuotas detectadas este mes.</p>
+            ) : (
+              <>
+                {cuotas.map((c) => {
+                  const pct = (c.cuotasPagadas / c.totalCuotas) * 100;
+                  return (
+                    <div className="cuota-row" key={c.id}>
+                      <div className="cuota-top">
+                        <span className="comercio">{c.comercio}</span>
+                        <span className="monto tabular">S/ {FORMATO.format(c.montoCuota)}/mes</span>
+                      </div>
+                      <div className="cuota-meta">
+                        <div className="cuota-progress">
+                          <i style={{ width: `${pct}%` }} />
+                        </div>
+                        <span className="n">
+                          cuota {c.cuotasPagadas + 1}/{c.totalCuotas}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+                <div className="cuota-total">
+                  <span>Total en cuotas este mes</span>
+                  <span className="valor tabular">S/ {FORMATO.format(totalCuotas)}</span>
+                </div>
+                <p className="cuota-note">
+                  Se marcan pagadas automáticamente al detectar el pago de la tarjeta, o a mano si el correo no llega
+                  (todavía no implementado).
+                </p>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -239,6 +239,10 @@ export async function alternarDestacada(cuentaId: number, destacada: boolean) {
   await db.update(cuentas).set({ destacada }).where(eq(cuentas.id, cuentaId));
 }
 
+export async function actualizarBilletera(cuentaId: number, billetera: "yape" | "plin" | null) {
+  await db.update(cuentas).set({ billetera }).where(eq(cuentas.id, cuentaId));
+}
+
 /**
  * Serie de patrimonio neto reproduciendo el historial de transacciones día a
  * día — no hay tabla de snapshots, se reconstruye igual que `saldoCuenta`
