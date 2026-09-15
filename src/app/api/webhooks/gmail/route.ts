@@ -73,17 +73,29 @@ export async function POST(request: NextRequest) {
         if (!id || idsVistos.has(id)) continue;
         idsVistos.add(id);
 
-        const { data: mensaje } = await gmail.users.messages.get({ userId: "me", id, format: "full" });
-        const rawEmail = mensajeARawEmail(mensaje);
-        if (!rawEmail) {
-          resultados.omitidas++;
-          continue;
-        }
+        // Un solo mensaje roto (ej. un correo promocional que Gmail ya
+        // archivó/borró para cuando llegamos a pedirlo — 404 "not found")
+        // no debe tumbar todo el batch: si esto lanza sin capturar, el
+        // checkpoint de abajo nunca se guarda y CADA notificación futura
+        // vuelve a arrancar desde el mismo historyId viejo, choca con el
+        // mismo mensaje roto, y todo lo posterior queda bloqueado para
+        // siempre (así se saltaron varias transacciones reales seguidas).
+        try {
+          const { data: mensaje } = await gmail.users.messages.get({ userId: "me", id, format: "full" });
+          const rawEmail = mensajeARawEmail(mensaje);
+          if (!rawEmail) {
+            resultados.omitidas++;
+            continue;
+          }
 
-        const resultado = await procesarCorreo(rawEmail, id);
-        if (resultado.estado === "insertada") resultados.insertadas++;
-        else if (resultado.estado === "duplicada") resultados.duplicadas++;
-        else resultados.omitidas++;
+          const resultado = await procesarCorreo(rawEmail, id);
+          if (resultado.estado === "insertada") resultados.insertadas++;
+          else if (resultado.estado === "duplicada") resultados.duplicadas++;
+          else resultados.omitidas++;
+        } catch (error) {
+          console.error(`webhook gmail: fallo procesando mensaje ${id}, se salta`, error);
+          resultados.omitidas++;
+        }
       }
     }
 
