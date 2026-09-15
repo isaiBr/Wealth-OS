@@ -120,7 +120,13 @@ function parseTransferenciaEntreCuentas(email: RawEmail): ParsedTransaction | nu
   const montoInfo =
     parseMonto(valorLinea(body, "Total cobrado al tipo de cambio")) ??
     parseMonto(valorLinea(body, "Monto transferido"));
-  const fecha = parseFecha(valorLinea(body, "Fecha y hora") ?? "");
+  // La conversión en vivo de HTML a texto (src/gmail/mensaje.ts) a veces deja
+  // "Fecha y hora" pegado en la misma línea que el label anterior
+  // ("Operación realizada ... Fecha y hora 13 de Septiembre...") en vez de
+  // empezar su propia línea como en el correo copiado a mano — por eso, si
+  // valorLinea() no la encuentra anclada al inicio de línea, se busca el
+  // patrón de fecha en todo el cuerpo como respaldo.
+  const fecha = parseFecha(valorLinea(body, "Fecha y hora") ?? body);
   const numeroOperacion = valorLinea(body, "Número de operación");
   const desde = valorLinea(body, "Desde");
   const enviadoA = valorLinea(body, "Enviado a");
