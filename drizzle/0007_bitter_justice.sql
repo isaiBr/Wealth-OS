@@ -1,0 +1,1 @@
+ALTER TABLE `categorias` ADD `excluir_de_gasto_real` integer DEFAULT false NOT NULL;

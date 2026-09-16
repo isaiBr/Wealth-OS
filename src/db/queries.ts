@@ -15,6 +15,12 @@ export async function listarCategorias() {
   return db.select().from(categorias).orderBy(asc(categorias.nombre));
 }
 
+/** Categorías marcadas `excluirDeGastoReal` (plata que salió pero no es tu gasto real — ver schema.ts). */
+async function idsCategoriasExcluidas(): Promise<Set<number>> {
+  const todas = await listarCategorias();
+  return new Set(todas.filter((c) => c.excluirDeGastoReal).map((c) => c.id));
+}
+
 function signo(tipo: string): 1 | -1 {
   return tipo === "ingreso" || tipo === "devolucion" ? 1 : -1;
 }
@@ -61,6 +67,7 @@ export async function transaccionesDelMes(mes: string) {
 
 export async function resumenMes(mes: string) {
   const txs = await transaccionesDelMes(mes);
+  const excluidas = await idsCategoriasExcluidas();
   let ingresos = 0;
   let gastos = 0;
   let transferenciasInternas = 0;
@@ -71,6 +78,7 @@ export async function resumenMes(mes: string) {
       transferenciasInternas += t.monto;
       continue;
     }
+    if (t.categoriaId !== null && excluidas.has(t.categoriaId)) continue;
     if (t.tipo === "ingreso") {
       ingresos += t.monto;
     } else if (t.tipo === "devolucion") {
@@ -108,6 +116,7 @@ export async function presupuestoPorCategoria(mes: string): Promise<{
 }> {
   const todasCategorias = await listarCategorias();
   const txs = await transaccionesDelMes(mes);
+  const excluidas = await idsCategoriasExcluidas();
 
   // Una devolución no trae categoría propia (no es un gasto nuevo) — para
   // que la suma por categoría cuadre con el total, se resta de la misma
@@ -132,6 +141,7 @@ export async function presupuestoPorCategoria(mes: string): Promise<{
       if (signo > 0) sinCategorizar += t.monto;
       continue;
     }
+    if (excluidas.has(categoriaId)) continue;
     gastoPorCategoria.set(categoriaId, (gastoPorCategoria.get(categoriaId) ?? 0) + signo * t.monto);
   }
 
@@ -380,8 +390,11 @@ export async function gastoHormigaAnualizado(mes: string): Promise<GastoHormiga>
 
   const todasCategorias = await listarCategorias();
   const categoriaPorId = new Map(todasCategorias.map((c) => [c.id, c]));
+  const excluidas = await idsCategoriasExcluidas();
+  const filasContables = filas.filter((f) => f.categoriaId === null || !excluidas.has(f.categoriaId));
+
   const porCategoriaMap = new Map<string, number>();
-  for (const f of filas) {
+  for (const f of filasContables) {
     const nombre = (f.categoriaId && categoriaPorId.get(f.categoriaId)?.nombre) || "Sin categoría";
     porCategoriaMap.set(nombre, (porCategoriaMap.get(nombre) ?? 0) + f.monto);
   }
@@ -389,7 +402,7 @@ export async function gastoHormigaAnualizado(mes: string): Promise<GastoHormiga>
     .map(([nombre, monto]) => ({ nombre, monto }))
     .sort((a, b) => b.monto - a.monto);
 
-  const totalMes = filas.reduce((acc, f) => acc + f.monto, 0);
+  const totalMes = filasContables.reduce((acc, f) => acc + f.monto, 0);
   return { porCategoria, totalMes, proyeccionAnual: totalMes * 12 };
 }
 

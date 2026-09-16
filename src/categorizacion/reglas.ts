@@ -11,6 +11,13 @@ const REGLAS_POR_COMERCIO: { patron: RegExp; categoria: string }[] = [
   { patron: /plansalud|clinica|essalud|farmacia|botica/i, categoria: "Salud" },
   { patron: /oxxo|tambo|tottus|plaza vea|metro|wong|vivanda|moodshi/i, categoria: "Alimentación" },
   { patron: /netflix|spotify|hbo|disney|youtube premium|icloud|apple\.com\/bill|smart ?fit/i, categoria: "Suscripciones" },
+  { patron: /anthropic/i, categoria: "Tecnología" },
+  { patron: /gabriel obregon/i, categoria: "Alimentación" },
+  // "ROMA" a secas es el grifo (gasolina/GLP) — match exacto para no pisar
+  // la regla de "tambo" de arriba (ej. "TAMBO ROMA" es una tienda, no el
+  // grifo, y esa ya matchea antes por orden de todos modos).
+  { patron: /^roma$/i, categoria: "Vehículo" },
+  { patron: /victor m\.? sanchez/i, categoria: "Vehículo" },
 ];
 
 /**
