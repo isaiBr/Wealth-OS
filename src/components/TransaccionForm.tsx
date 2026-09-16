@@ -33,19 +33,32 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
 
   const fechaDefault = transaccion ? transaccion.fecha.slice(0, 10) : new Date().toISOString().slice(0, 10);
 
+  // Una transacción de correo puede ser transferencia/retiro/pago_servicio/
+  // devolución, no solo compra o ingreso — el selector de abajo solo cubre
+  // esas dos opciones, así que forzar una de ellas al editar reescribía el
+  // tipo real (ej. "devolucion" -> "compra"), lo que podía chocar con el
+  // índice único (numero_operacion, tipo) contra la compra hermana del
+  // mismo número de operación y tumbar la página. Para una edición sobre
+  // una transacción real, el tipo original se manda tal cual, sin selector.
+  const tipoEditable = !esEdicion || transaccion!.fuente === "manual";
+
   return (
     <Modal onClose={onClose}>
       <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
         {esEdicion ? "Editar movimiento" : "Agregar gasto manual"}
       </h2>
       <form action={handleSubmit}>
-        <div className="field">
-          <label htmlFor="tipo">Tipo</label>
-          <select id="tipo" name="tipo" defaultValue={transaccion?.tipo === "ingreso" ? "ingreso" : "compra"} required>
-            <option value="compra">Gasto</option>
-            <option value="ingreso">Ingreso</option>
-          </select>
-        </div>
+        {tipoEditable ? (
+          <div className="field">
+            <label htmlFor="tipo">Tipo</label>
+            <select id="tipo" name="tipo" defaultValue={transaccion?.tipo === "ingreso" ? "ingreso" : "compra"} required>
+              <option value="compra">Gasto</option>
+              <option value="ingreso">Ingreso</option>
+            </select>
+          </div>
+        ) : (
+          <input type="hidden" name="tipo" value={transaccion!.tipo} />
+        )}
 
         <div className="field">
           <label htmlFor="monto">Monto (S/)</label>

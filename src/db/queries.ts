@@ -203,7 +203,14 @@ export async function crearTransaccionManual(input: NuevaTransaccionManual) {
 export interface EdicionTransaccion {
   id: number;
   cuentaId: number;
-  tipo: "compra" | "ingreso";
+  // No se restringe a "compra" | "ingreso": a diferencia de una creación
+  // manual, editar una transacción real de correo (transferencia, retiro,
+  // pago_servicio, devolución) debe conservar su tipo original — cambiarlo
+  // a "compra" podía chocar con el índice único (numero_operacion, tipo)
+  // cuando ya existe una compra con el mismo número de operación (el caso
+  // típico de Uber: compra + devolución comparten número), lo que tumbaba
+  // la página al editar.
+  tipo: string;
   monto: number;
   comercio: string;
   categoriaId: number | null;
