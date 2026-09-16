@@ -450,6 +450,19 @@ button {
   font-size: 22px;
   font-weight: 520;
 }
+.stat .delta {
+  font-size: 11px;
+  margin-top: 4px;
+}
+.stat .delta.up-good {
+  color: var(--accent-strong);
+}
+.stat .delta.up-warn {
+  color: var(--warn);
+}
+.stat .delta.flat {
+  color: var(--ink-muted);
+}
 
 .stats-label {
   font-size: 11px;

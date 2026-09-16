@@ -12,6 +12,7 @@ import {
   transaccionesDelMes,
 } from "@/db/queries";
 import { evaluarInsights } from "@/logic/insights";
+import { deltaMonto, deltaPuntos } from "@/logic/comparaciones";
 
 export const dynamic = "force-dynamic";
 
@@ -53,6 +54,16 @@ function mesActual(): string {
   return new Date().toISOString().slice(0, 7);
 }
 
+function mesAnteriorDe(mes: string): string {
+  const [anio, m] = mes.split("-").map(Number);
+  return m === 1 ? `${anio - 1}-12` : `${anio}-${String(m - 1).padStart(2, "0")}`;
+}
+
+function nombreMes(mes: string): string {
+  const [anio, m] = mes.split("-").map(Number);
+  return new Intl.DateTimeFormat("es-PE", { month: "long" }).format(new Date(anio, m - 1, 1));
+}
+
 function estadoBarra(pct: number | null): "" | "warn" | "over" {
   if (pct === null) return "";
   if (pct >= 100) return "over";
@@ -86,6 +97,32 @@ export default async function InicioPage() {
   // --- Plan de gasto consciente (solo montos reales, sin meta) ---
   const porBucket = agruparPorBucket(presupuesto);
   const pctGastosFijos = resumen.gastos > 0 ? ((porBucket.fijos ?? 0) / resumen.gastos) * 100 : 0;
+
+  // --- Comparación vs. mes anterior (mockup: "mensajitos" bajo cada stat) ---
+  const mesPrev = mesAnteriorDe(mes);
+  const resumenPrev = await resumenMes(mesPrev);
+  const nombreMesPrev = nombreMes(mesPrev);
+  // Sin datos del mes anterior (recién empezando a usar la app) no hay con
+  // qué comparar — se omite el delta en vez de mostrar "+100% vs. nada".
+  let deltaIngresos: ReturnType<typeof deltaMonto> | null = null;
+  let deltaGastos: ReturnType<typeof deltaMonto> | null = null;
+  let deltaTasaAhorro: ReturnType<typeof deltaPuntos> | null = null;
+  let deltaPctFijos: ReturnType<typeof deltaPuntos> | null = null;
+  if (resumenPrev.total > 0) {
+    deltaIngresos = deltaMonto(resumen.ingresos, resumenPrev.ingresos, "mayorEsMejor", nombreMesPrev);
+    deltaGastos = deltaMonto(resumen.gastos, resumenPrev.gastos, "mayorEsPeor", nombreMesPrev);
+
+    const { filas: presupuestoPrev } = await presupuestoPorCategoria(mesPrev);
+    const porBucketPrev = agruparPorBucket(presupuestoPrev);
+    const tasaAhorroPrev =
+      resumenPrev.ingresos > 0 ? ((resumenPrev.ingresos - resumenPrev.gastos) / resumenPrev.ingresos) * 100 : null;
+    const pctGastosFijosPrev = resumenPrev.gastos > 0 ? ((porBucketPrev.fijos ?? 0) / resumenPrev.gastos) * 100 : 0;
+
+    if (tasaAhorro !== null && tasaAhorroPrev !== null) {
+      deltaTasaAhorro = deltaPuntos(tasaAhorro, tasaAhorroPrev, "mayorEsMejor", nombreMesPrev);
+    }
+    deltaPctFijos = deltaPuntos(pctGastosFijos, pctGastosFijosPrev, "mayorEsPeor", nombreMesPrev);
+  }
 
   // --- Compromisos recurrentes ---
   const { totalMensual: totalCuotas } = await cuotasActivas();
@@ -218,18 +255,22 @@ export default async function InicioPage() {
         <div className="stat">
           <div className="label">Ingreso del mes</div>
           <div className="valor tabular">S/ {resumen.ingresos.toFixed(2)}</div>
+          {deltaIngresos && <div className={`delta tabular ${deltaIngresos.clase}`}>{deltaIngresos.texto}</div>}
         </div>
         <div className="stat">
           <div className="label">Gasto real</div>
           <div className="valor tabular">S/ {resumen.gastos.toFixed(2)}</div>
+          {deltaGastos && <div className={`delta tabular ${deltaGastos.clase}`}>{deltaGastos.texto}</div>}
         </div>
         <div className="stat">
           <div className="label">Tasa de ahorro</div>
           <div className="valor tabular">{tasaAhorro === null ? "—" : `${tasaAhorro.toFixed(0)}%`}</div>
+          {deltaTasaAhorro && <div className={`delta tabular ${deltaTasaAhorro.clase}`}>{deltaTasaAhorro.texto}</div>}
         </div>
         <div className="stat">
           <div className="label">Gastos fijos</div>
           <div className="valor tabular">{pctGastosFijos.toFixed(0)}%</div>
+          {deltaPctFijos && <div className={`delta tabular ${deltaPctFijos.clase}`}>{deltaPctFijos.texto}</div>}
         </div>
       </div>
 
