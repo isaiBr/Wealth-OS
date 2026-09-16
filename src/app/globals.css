@@ -914,6 +914,13 @@ button {
   background: var(--surface-sunken);
   color: var(--ink-muted);
 }
+/* Sugerida por IA (Capa 2, roadmap §5/§8), todavía sin confirmar por el
+   usuario — borde punteado en vez de relleno sólido para que se note que
+   vale la pena revisarla. */
+.tx-cat-pill.suggested {
+  background: none;
+  border: 1px dashed var(--accent-strong);
+}
 .tx-amount {
   font-size: 14.5px;
   flex-shrink: 0;

@@ -6,6 +6,7 @@ import { interbankParser } from "@/parsers/interbank";
 import type { RawEmail } from "@/parsers/types";
 import { pareceNombrePropio } from "@/logic/transferencia-interna";
 import { categorizar } from "@/categorizacion/reglas";
+import { categorizarConIA } from "@/categorizacion/ia";
 import { TIPO_CAMBIO_USD_PEN } from "@/config/moneda";
 import { extraerDigitosDestino, extraerDigitosOrigen, resolverCuentaIdPorDigitos } from "@/gmail/resolver-cuenta";
 
@@ -65,9 +66,25 @@ export async function procesarCorreo(email: RawEmail, gmailMessageId?: string): 
   }
 
   const esTransferenciaInterna = parsed.esTransferenciaInterna || pareceNombrePropio(parsed.comercio);
-  const nombreCategoria =
-    esTransferenciaInterna || parsed.tipo === "devolucion" ? null : categorizar(parsed.tipo, parsed.comercio);
   const categoriaIdPorNombre = await obtenerCategoriaIdPorNombre();
+
+  let nombreCategoria: string | null = null;
+  let categoriaConfirmada = false;
+  if (!esTransferenciaInterna && parsed.tipo !== "devolucion") {
+    nombreCategoria = categorizar(parsed.tipo, parsed.comercio);
+    if (nombreCategoria !== null) {
+      categoriaConfirmada = true; // Capa 1: regla directa por comercio/tipo
+    } else {
+      // Capa 2 (roadmap §5): ninguna regla matcheó, se le pasa a Claude.
+      // Nace como sugerencia, no confirmada (roadmap §8) — el usuario la
+      // confirma o corrige desde Movimientos.
+      nombreCategoria = await categorizarConIA(
+        { tipo: parsed.tipo, comercio: parsed.comercio, descripcion, monto },
+        [...categoriaIdPorNombre.keys()]
+      );
+      categoriaConfirmada = false;
+    }
+  }
   const categoriaId = nombreCategoria ? categoriaIdPorNombre.get(nombreCategoria) ?? null : null;
 
   let cuentaDestinoId: number | null = null;
@@ -87,7 +104,7 @@ export async function procesarCorreo(email: RawEmail, gmailMessageId?: string): 
       fecha: parsed.fecha,
       numeroOperacion: parsed.numeroOperacion,
       categoriaId,
-      categoriaConfirmada: categoriaId !== null,
+      categoriaConfirmada: categoriaId !== null && categoriaConfirmada,
       esTransferenciaInterna,
       cuentaDestinoId,
       fuente: "email",

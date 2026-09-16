@@ -99,7 +99,9 @@ export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
                         {t.esTransferenciaInterna ? (
                           <span className="tx-cat-pill transfer">Transferencia interna</span>
                         ) : (
-                          <span className="tx-cat-pill">{categoria?.nombre ?? "Sin categoría"}</span>
+                          <span className={`tx-cat-pill${categoria && !t.categoriaConfirmada ? " suggested" : ""}`}>
+                            {categoria?.nombre ?? "Sin categoría"}
+                          </span>
                         )}
                       </div>
                     </div>
