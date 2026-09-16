@@ -1,6 +1,7 @@
-import { deudaPendiente, listarCuentas, obtenerFondoEmergencia, saldoCuenta } from "@/db/queries";
+import { deudaPendiente, listarCobranzas, listarCuentas, obtenerFondoEmergencia, saldoCuenta } from "@/db/queries";
 import { CuentasView } from "./CuentasView";
 import { FondoEmergenciaView } from "./FondoEmergenciaView";
+import { CobranzasView } from "./CobranzasView";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +22,7 @@ export default async function CuentasPage() {
   );
   const fondo = await obtenerFondoEmergencia();
   const deudas = await deudaPendiente();
+  const cobranzas = await listarCobranzas();
 
   return (
     <div className="screen">
@@ -63,6 +65,8 @@ export default async function CuentasPage() {
               ))
             )}
           </div>
+
+          <CobranzasView cobranzas={cobranzas} />
         </div>
       </div>
     </div>

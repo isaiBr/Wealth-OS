@@ -141,3 +141,19 @@ export const fondoEmergencia = sqliteTable("fondo_emergencia", {
   metaMeses: real("meta_meses").notNull(),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
+
+// --- Cobranzas (dinero por cobrar) -----------------------------------------
+// Lo inverso de una deuda: plata que te deben (préstamos hechos, ventas
+// pendientes de cobrar), a mano — no llega por correo como una transacción
+// bancaria, así que no vive en `transacciones`. Cuando el dinero real entra
+// a una cuenta, esa transferencia la captura el webhook por su cuenta; esta
+// tabla es solo el recordatorio/tracking de "me deben esto", no se cruza
+// automáticamente con transacciones para evitar contarlo doble.
+export const cobranzas = sqliteTable("cobranzas", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  descripcion: text("descripcion").notNull(),
+  montoEsperado: real("monto_esperado").notNull(),
+  estado: text("estado").notNull().default("pendiente"), // 'pendiente' | 'cobrado'
+  fechaCobro: text("fecha_cobro"),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});

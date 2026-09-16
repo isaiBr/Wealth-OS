@@ -1,10 +1,11 @@
 import { and, asc, desc, eq, gte, lt } from "drizzle-orm";
 import { db } from "./client";
-import { categorias, comprasCuotas, cuentas, fondoEmergencia, tarjetas, transacciones } from "./schema";
+import { categorias, cobranzas, comprasCuotas, cuentas, fondoEmergencia, tarjetas, transacciones } from "./schema";
 
 export type Cuenta = typeof cuentas.$inferSelect;
 export type Categoria = typeof categorias.$inferSelect;
 export type Transaccion = typeof transacciones.$inferSelect;
+export type Cobranza = typeof cobranzas.$inferSelect;
 
 export async function listarCuentas() {
   return db.select().from(cuentas).orderBy(asc(cuentas.id));
@@ -433,4 +434,34 @@ export async function configurarFondoEmergencia(input: { cuentaId: number; metaM
   } else {
     await db.insert(fondoEmergencia).values(input);
   }
+}
+
+/**
+ * Dinero por cobrar (préstamos hechos, ventas pendientes) — lo inverso de
+ * `deudaPendiente`. Tracking a mano, no se cruza con `transacciones` (ver
+ * comentario en schema.ts): cuando la plata real llega a una cuenta, esa
+ * transferencia la captura el webhook por su cuenta.
+ */
+export async function listarCobranzas() {
+  return db.select().from(cobranzas).orderBy(desc(cobranzas.createdAt));
+}
+
+export interface NuevaCobranza {
+  descripcion: string;
+  montoEsperado: number;
+}
+
+export async function crearCobranza(input: NuevaCobranza) {
+  await db.insert(cobranzas).values(input);
+}
+
+export async function marcarCobranzaCobrada(id: number, cobrado: boolean) {
+  await db
+    .update(cobranzas)
+    .set({ estado: cobrado ? "cobrado" : "pendiente", fechaCobro: cobrado ? new Date().toISOString().slice(0, 10) : null })
+    .where(eq(cobranzas.id, id));
+}
+
+export async function eliminarCobranza(id: number) {
+  await db.delete(cobranzas).where(eq(cobranzas.id, id));
 }

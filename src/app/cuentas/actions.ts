@@ -1,7 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { crearCuenta, alternarDestacada, actualizarBilletera, configurarFondoEmergencia } from "@/db/queries";
+import {
+  crearCuenta,
+  alternarDestacada,
+  actualizarBilletera,
+  configurarFondoEmergencia,
+  crearCobranza,
+  marcarCobranzaCobrada,
+  eliminarCobranza,
+} from "@/db/queries";
 
 export async function crearCuentaAction(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
@@ -48,4 +56,26 @@ export async function configurarFondoEmergenciaAction(formData: FormData) {
   await configurarFondoEmergencia({ cuentaId, metaMeses });
   revalidatePath("/cuentas");
   revalidatePath("/");
+}
+
+export async function crearCobranzaAction(formData: FormData) {
+  const descripcion = String(formData.get("descripcion") ?? "").trim();
+  const montoEsperado = parseFloat(String(formData.get("montoEsperado") ?? ""));
+
+  if (!descripcion || Number.isNaN(montoEsperado) || montoEsperado <= 0) {
+    throw new Error("Datos de cobranza incompletos");
+  }
+
+  await crearCobranza({ descripcion, montoEsperado });
+  revalidatePath("/cuentas");
+}
+
+export async function marcarCobranzaCobradaAction(id: number, cobrado: boolean) {
+  await marcarCobranzaCobrada(id, cobrado);
+  revalidatePath("/cuentas");
+}
+
+export async function eliminarCobranzaAction(id: number) {
+  await eliminarCobranza(id);
+  revalidatePath("/cuentas");
 }
