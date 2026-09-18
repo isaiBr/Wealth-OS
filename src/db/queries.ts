@@ -567,10 +567,23 @@ export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMens
     .from(comprasCuotas)
     .leftJoin(tarjetas, eq(comprasCuotas.tarjetaId, tarjetas.id));
 
+  const pagosPorCompra = new Map<number, { mes: string }[]>();
+  if (compras.length > 0) {
+    const todosPagos = await db
+      .select({ compraCuotaId: pagosCuota.compraCuotaId, mes: pagosCuota.mes })
+      .from(pagosCuota)
+      .where(inArray(pagosCuota.compraCuotaId, compras.map((c) => c.id)));
+    for (const p of todosPagos) {
+      const lista = pagosPorCompra.get(p.compraCuotaId) ?? [];
+      lista.push({ mes: p.mes });
+      pagosPorCompra.set(p.compraCuotaId, lista);
+    }
+  }
+
   const filas: CuotaActiva[] = [];
   let totalMensual = 0;
   for (const c of compras) {
-    const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, c.id));
+    const pagos = pagosPorCompra.get(c.id) ?? [];
     const cuotasPagadasTotal = c.cuotasPagadasBase + pagos.length;
     if (cuotasPagadasTotal >= c.totalCuotas) continue; // ya terminó de pagarse, no es "activa"
     const pagadaEsteMes = pagos.some((p) => p.mes === mesActual);
@@ -801,13 +814,22 @@ export interface DeudaPendiente {
 /** Deriva la deuda directo del saldo de las cuentas tipo tarjeta_credito — sin tabla de deudas separada. */
 export async function deudaPendiente(): Promise<DeudaPendiente[]> {
   const tarjetasCredito = await db.select().from(cuentas).where(eq(cuentas.tipo, "tarjeta_credito"));
+  if (tarjetasCredito.length === 0) return [];
+
+  const cuentaIds = tarjetasCredito.map((c) => c.id);
+  const [saldos, tarjetasDeCuentas] = await Promise.all([
+    Promise.all(tarjetasCredito.map((c) => saldoCuenta(c.id))),
+    db.select().from(tarjetas).where(inArray(tarjetas.cuentaId, cuentaIds)),
+  ]);
+  const tarjetaPorCuentaId = new Map(tarjetasDeCuentas.map((t) => [t.cuentaId, t]));
+
   const resultado: DeudaPendiente[] = [];
-  for (const cuenta of tarjetasCredito) {
-    const saldo = await saldoCuenta(cuenta.id);
-    if (saldo >= 0) continue;
-    const tarjeta = await db.select().from(tarjetas).where(eq(tarjetas.cuentaId, cuenta.id)).get();
+  tarjetasCredito.forEach((cuenta, i) => {
+    const saldo = saldos[i];
+    if (saldo >= 0) return;
+    const tarjeta = tarjetaPorCuentaId.get(cuenta.id);
     resultado.push({ cuenta, saldo: -saldo, fechaVencimiento: tarjeta?.fechaVencimiento ?? null });
-  }
+  });
   return resultado;
 }
 

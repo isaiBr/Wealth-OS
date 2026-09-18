@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, real, uniqueIndex } from "drizzle-orm/sqlite-core";
+import { sqliteTable, text, integer, real, uniqueIndex, index } from "drizzle-orm/sqlite-core";
 import { sql } from "drizzle-orm";
 
 // --- Cuentas -----------------------------------------------------------
@@ -131,6 +131,13 @@ export const transacciones = sqliteTable(
     // es por (número de operación + tipo), no por número de operación solo.
     uniqueIndex("transacciones_numero_operacion_tipo_idx").on(table.numeroOperacion, table.tipo),
     uniqueIndex("transacciones_gmail_message_id_idx").on(table.gmailMessageId),
+    // Sin estos índices, saldoCuenta/transaccionesDelMes/listarMetasCompra
+    // hacían table scan completo en cada llamada — se nota cada vez más a
+    // medida que crece el historial (ver plan de optimización, 2026-09-18).
+    index("transacciones_cuenta_id_idx").on(table.cuentaId),
+    index("transacciones_cuenta_destino_id_idx").on(table.cuentaDestinoId),
+    index("transacciones_fecha_idx").on(table.fecha),
+    index("transacciones_categoria_id_idx").on(table.categoriaId),
   ]
 );
 
