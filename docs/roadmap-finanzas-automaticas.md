@@ -99,6 +99,57 @@ Principios de autores/libros reconocidos, traducidos a features concretas — in
 
 **Conexión con el resto de Growth OS**: cuando la tasa de ahorro/inversión genera excedente sostenido, esa señal alimenta a Opportunity Radar ("tienes S/X disponibles de forma constante, esto es lo que podrías evaluar invertir") — Wealth OS deja de ser solo registro y empieza a alimentar al resto del sistema.
 
+## Backlog operativo — pendientes reportados (2026-09-17)
+
+Puntos reportados en revisión de uso real de la app (no del mockup). Verificados contra el código antes de anotarlos, para no listar como "pendiente" algo que ya funciona.
+
+### Bugs confirmados (corregir)
+- [x] **La hora de la transacción se resetea a 00:00 al editar.** ✅ Implementado — `movimientos/actions.ts` preserva la hora original de `transaccion.fecha` cuando la fecha (día) no cambió.
+- [x] **Marcar una cuota como "pagada" no la descuenta de "Disponible real hoy" del mes.** ✅ Rediseñado por completo — ver "Cuotas: rediseño a registro mensual" más abajo.
+
+### Nuevas funcionalidades
+- [x] **"Sin contabilizar" por movimiento individual.** ✅ Implementado (`transacciones.excluida`) — se gestiona desde un picker rápido por fila en Movimientos (botón "+ etiqueta"), no desde el form completo.
+- [x] **Resumen por categoría + etiqueta/subcategoría.** ✅ Implementado junto con el sistema de tags (Fase D) — expandible en "Presupuesto por categoría".
+- [x] **Paginación de Movimientos.** ✅ Implementado — `transaccionesDelMes()` acepta `limit`/`offset`, botón "Cargar más" en `MovimientosView.tsx`.
+- [x] **2 reglas nuevas en el motor de insights: "Proyección" y "Gasto hormiga".** ✅ Cableadas al catálogo de `src/logic/insights.ts`.
+
+### Gaps de onboarding
+- [x] **"Categorías a vigilar" sin barra/consumido-total cuando no hay límite.** ✅ Implementada la opción (b): CTA "Configura un límite →" en `page.tsx` cuando `limiteMensual` es `null`. El límite sugerido automático (promedio móvil, §10) se descartó, sigue como posible mejora futura si el CTA no alcanza.
+
+### Ya funciona correctamente (aclaraciones, sin acción pendiente)
+- **La barra de progreso por categoría YA es progresiva en todo momento cuando hay límite configurado** (verde → ámbar ≥80% → rojo ≥100%), tanto en "Categorías a vigilar" de Inicio (`src/app/page.tsx:67-72`) como en "Presupuesto por categoría" (`PresupuestoView.tsx:16-21`). El gap real no es la lógica de la barra sino la falta de límites configurados de entrada — ver el punto de onboarding arriba.
+- **El motor de insights no es estático ni depende de IA en tiempo real.** Es lógica de negocio pura sobre datos ya categorizados, se recalcula en cada carga de Inicio (barato, instantáneo) — no hace falta un botón de "recargar" ni un cron semanal para esto. La confusión de "actualizar cada semana" aplicaría solo si en algún momento se usara IA generativa para redactar los insights, que no es el caso hoy ni el plan.
+- **"Tu mes en números": los 4 stats y sus mensajes de comparación YA existen y funcionan** (`src/app/page.tsx:254-275`, lógica de deltas en `src/logic/comparaciones.ts`, ej. "+ S/ 300 vs. agosto"). Solo falta el título de sección arriba de las tarjetas — hoy no hay un `<div className="stats-label">Tu mes en números</div>` antes del grid, a diferencia de "Compromisos recurrentes" que sí lo tiene. Es un cambio de una línea, no una feature nueva.
+
+### Features grandes — todas implementadas (Fases A-E, sesión 2026-09-16 al 2026-09-18)
+
+**Fase A — Quick wins.** ✅ Ver checklist arriba (bugs + gaps de onboarding).
+
+**Fase B — Persistencia de reglas de categorización.** ✅ Tabla `reglas_categorizacion` (patrón, categoría, origen manual/IA, `vecesUsada`). `procesarCorreo()` (`src/gmail/procesar.ts`) ahora prueba: tipo → BD (`buscarReglaPorComercio`) → array hardcodeado (`reglas.ts`, queda como semilla) → Capa 2 IA. `actualizarTransaccion`/`crearTransaccion` guardan/actualizan la regla automáticamente al confirmar una categoría.
+
+**Fase C — Tab de Configuración.** ✅ `/configuracion`: CRUD de categorías (crear/editar/archivar — nunca delete duro, por el historial), en layout de 2 columnas: col-main = Categorías + Etiquetas, col-side = "Categorización automática" (toggles funcionales, no decorativos: **"Sugerir con IA"** apaga la Capa 2 en `procesarCorreo()`, **"Aprender reglas nuevas"** apaga el guardado automático de reglas — tabla `configuracion_ia`, fila única) + lista de Reglas de categorización (patrón truncado visualmente a 220px con `title` para ver el completo al hover).
+
+**Fase D — Sistema de etiquetas (tags).** ✅ Tags planos, muchos-a-muchos (tabla `tags` + puente `transacciones_tags`). Picker rápido por fila en Movimientos (botón "+ etiqueta" → modal con pills toggleables + el checkbox de "sin contabilizar", sin pasar por el form grande). Drill-down por categoría+etiqueta en Presupuesto.
+
+**Fase E — Metas de compra.** ✅ `/presupuesto`, sub-sección "Metas de compra". Cada meta crea su propia categoría dedicada (bucket `ahorro`) — el progreso se deriva de movimientos reales en esa categoría (mismo principio que `fondoEmergencia`), no de un número manual. Método "cuotas" se puede vincular a una compra real de `comprasCuotas` una vez concretada. Sugerencia de cuánto apartar por mes es matemática simple (falta / meses restantes) — **no usa IA todavía**, a diferencia de lo que planteaba el diseño original (queda como posible mejora, ver pendientes abajo).
+
+### Cuotas: rediseño a registro mensual (post Fase A, durante correcciones de la sesión)
+El modelo viejo (`cuotasPagadas` como contador de por vida + `ultimoPagoMes` como string único) no permitía ver ni corregir el estado mes a mes. Se agregó `pagos_cuota` (tabla append-only: una fila por `compraCuotaId` + mes realmente pagado). `cuotasPagadas` de `compras_cuotas` pasó a ser solo la *base* (pagos previos a este rediseño, congelada) — el total real es `base + COUNT(pagos_cuota)`. Una cuota ya no desaparece de "Cuotas activas" al marcarla pagada: se queda visible con el label **"[Mes]: Pagada/Pendiente"** y un botón para deshacer. También se agregó un editor manual (✎) para corregir el total de cuotas pagadas si el conteo queda mal (ajusta la base, sin tocar el registro mensual ya cargado).
+
+### Correcciones de datos reales encontradas durante la sesión (no son bugs de código)
+- Reconciliado saldo de una cuenta BCP: el hueco venía de una transferencia real (de un familiar) que nunca llegó por correo — se cargó a mano como ingreso manual. El parser de Gmail puede estar perdiendo cierto formato de correo de transferencias recibidas; no se investigó la causa raíz.
+- Corregidos los contadores base de 2 compras en cuotas que habían quedado mal seedeadas (Gimnasio B2 tenía 2/6 en vez de 0/6; Mantenimiento de carro tenía 5/6 + un pago de más marcado en vez de 4/6 real).
+
+### Pendientes reales — nada bloqueante, quedan para cuando se retome
+
+1. **Vincular automáticamente "pago a mi propia tarjeta" con la deuda de esa tarjeta.** Hoy, cuando el usuario paga su propia tarjeta de crédito vía una transferencia que sale de una cuenta líquida, `pareceNombrePropio()` (`src/logic/transferencia-interna.ts`) la marca `esTransferenciaInterna=true` correctamente, pero **nunca se intenta resolver un `cuentaDestinoId` hacia la tarjeta** — esa resolución (`resolverCuentaIdPorDigitos` + `extraerDigitosDestino`) solo se dispara en `procesar.ts` cuando el banco YA marcó el correo como transferencia (`parsed.esTransferenciaInterna`), no cuando lo detecta la heurística de nombre propio después. Efecto: la deuda de la tarjeta (`deudaPendiente()`) no baja aunque el usuario haya pagado, hasta que se corrija a mano con el editor ✎ de Deudas (ya existe como parche manual). **Antes de programar el arreglo automático, falta confirmar con el usuario a qué tarjeta van exactamente esos pagos** (se sospecha que "IO*ISAI ENRIQUE BRAVO S" es la Tarjeta IO BCP, pero no se confirmó) — no implementar a ciegas.
+2. **¿La IA puede proponer categorías nuevas?** Hoy `categorizarConIA()` (`src/categorizacion/ia.ts`) está limitada por diseño a un enum de las categorías ya existentes (para que nunca cree una categoría sin que el usuario la revise). Sigue siendo una decisión abierta si en algún momento se quiere que la IA sugiera "esto podría ser una categoría nueva" en vez de forzarla a elegir entre las que ya hay.
+3. **Detección automática de suscripciones por recurrencia (roadmap §8) — todavía no implementada.** El widget "Suscripciones" de Presupuesto/Inicio hoy es 100% manual (categoría o etiqueta "Suscripciones" puesta a mano) — funciona y ya está conectado en Inicio, pero no detecta solo cuando un comercio+monto se repite ~mensualmente como proponía el diseño original.
+4. **Límite sugerido automático por promedio móvil (roadmap §10)** para categorías sin límite configurado — descartado a propósito en Fase A a favor del CTA manual "Configura un límite →". Revisar si hace falta más adelante.
+5. **Sugerencia de aporte mensual para metas de compra vía IA** — hoy es matemática simple (falta/meses restantes), el diseño original de la Fase E planteaba usar Claude para sugerir el monto considerando el gasto libre disponible y competencia entre metas. No implementado.
+6. **Parsers de Interbank y Pichincha** — el roadmap (Fase 0) los marca como prioridad pendiente; no se tocó código de parsers en esta sesión, su estado real no fue verificado.
+7. **Fase 2/3 del roadmap (notificaciones/bot de WhatsApp)** — no iniciado, confirmado como low priority.
+
 ## Fases
 
 **Fase 0 — Consolidar lo existente**
