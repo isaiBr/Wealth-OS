@@ -1,0 +1,1 @@
+ALTER TABLE `categorias` ADD `archivada` integer DEFAULT false NOT NULL;
