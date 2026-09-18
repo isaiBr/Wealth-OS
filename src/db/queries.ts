@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   categorias,
@@ -154,21 +154,32 @@ function signo(tipo: string): 1 | -1 {
   return tipo === "ingreso" || tipo === "devolucion" ? 1 : -1;
 }
 
-/** Saldo reconstruido: saldo_inicial + transacciones propias +/- transferencias internas recibidas. */
+/**
+ * Saldo reconstruido: saldo_inicial + transacciones propias +/- transferencias
+ * internas recibidas. La suma se hace en SQL (no trayendo cada fila para
+ * sumarla en JS) — Turso es una base remota, así que el costo real está en
+ * viajar cada fila por la red, no en la suma en sí. Con el índice en
+ * cuenta_id/cuenta_destino_id (ver migración 0016), esto es O(1) en la
+ * práctica sin importar cuánto crezca el historial.
+ */
 export async function saldoCuenta(cuentaId: number): Promise<number> {
   const cuenta = await db.select().from(cuentas).where(eq(cuentas.id, cuentaId)).get();
   if (!cuenta) return 0;
 
-  const propias = await db.select().from(transacciones).where(eq(transacciones.cuentaId, cuentaId));
-  const recibidas = await db
-    .select()
+  const propias = await db
+    .select({
+      total: sql<number>`coalesce(sum(case when ${transacciones.tipo} in ('ingreso', 'devolucion') then ${transacciones.monto} else -${transacciones.monto} end), 0)`,
+    })
     .from(transacciones)
-    .where(eq(transacciones.cuentaDestinoId, cuentaId));
+    .where(eq(transacciones.cuentaId, cuentaId))
+    .get();
+  const recibidas = await db
+    .select({ total: sql<number>`coalesce(sum(${transacciones.monto}), 0)` })
+    .from(transacciones)
+    .where(eq(transacciones.cuentaDestinoId, cuentaId))
+    .get();
 
-  let total = cuenta.saldoInicial;
-  for (const t of propias) total += signo(t.tipo) * t.monto;
-  for (const t of recibidas) total += t.monto;
-  return total;
+  return cuenta.saldoInicial + (propias?.total ?? 0) + (recibidas?.total ?? 0);
 }
 
 export async function saldoTotalLiquido(): Promise<number> {
