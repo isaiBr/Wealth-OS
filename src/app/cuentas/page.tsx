@@ -1,11 +1,17 @@
-import { deudaPendiente, listarCobranzas, listarCuentas, obtenerFondoEmergencia, saldoCuenta } from "@/db/queries";
+import {
+  deudaPendiente,
+  listarCobranzas,
+  listarCuentas,
+  listarDeudasManuales,
+  obtenerFondoEmergencia,
+  saldoCuenta,
+} from "@/db/queries";
 import { CuentasView } from "./CuentasView";
 import { FondoEmergenciaView } from "./FondoEmergenciaView";
 import { CobranzasView } from "./CobranzasView";
+import { DeudasView } from "./DeudasView";
 
 export const dynamic = "force-dynamic";
-
-const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export default async function CuentasPage() {
   const cuentas = await listarCuentas();
@@ -23,6 +29,7 @@ export default async function CuentasPage() {
   const fondo = await obtenerFondoEmergencia();
   const deudas = await deudaPendiente();
   const cobranzas = await listarCobranzas();
+  const deudasManuales = await listarDeudasManuales();
 
   return (
     <div className="screen">
@@ -37,34 +44,7 @@ export default async function CuentasPage() {
         <div className="col-side">
           <FondoEmergenciaView fondo={fondo} cuentas={cuentas.map((c) => ({ id: c.id, nombre: c.nombre }))} />
 
-          <div className="section-head">
-            <div className="section-title">Deudas</div>
-          </div>
-          <div className="card debt-card">
-            {deudas.length === 0 ? (
-              <p className="empty-note">Sin deudas pendientes.</p>
-            ) : (
-              deudas.map((d, i) => (
-                <div key={d.cuenta.id} style={i > 0 ? { marginTop: 16, paddingTop: 16, borderTop: "1px dashed var(--border)" } : undefined}>
-                  <div className="debt-head">
-                    <span className="debt-name">{d.cuenta.nombre}</span>
-                  </div>
-                  <div className="debt-bar-track">
-                    <div className="debt-bar-fill" style={{ width: "100%" }} />
-                  </div>
-                  <div className="debt-meta">
-                    <span>Pendiente</span>
-                    <span className="tabular">S/ {FORMATO.format(d.saldo)}</span>
-                  </div>
-                  {d.fechaVencimiento && (
-                    <div className="debt-due">
-                      Próximo pago: <b>{d.fechaVencimiento}</b>
-                    </div>
-                  )}
-                </div>
-              ))
-            )}
-          </div>
+          <DeudasView deudasTarjeta={deudas} deudasManuales={deudasManuales} />
 
           <CobranzasView cobranzas={cobranzas} />
         </div>

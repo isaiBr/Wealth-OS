@@ -5,8 +5,9 @@ import { bcpParser } from "@/parsers/bcp";
 import { interbankParser } from "@/parsers/interbank";
 import type { RawEmail } from "@/parsers/types";
 import { pareceNombrePropio } from "@/logic/transferencia-interna";
-import { categorizar } from "@/categorizacion/reglas";
+import { categorizarPorTipo, categorizarPorComercio } from "@/categorizacion/reglas";
 import { categorizarConIA } from "@/categorizacion/ia";
+import { buscarReglaPorComercio, obtenerConfiguracionIA } from "@/db/queries";
 import { TIPO_CAMBIO_USD_PEN } from "@/config/moneda";
 import { extraerDigitosDestino, extraerDigitosOrigen, resolverCuentaIdPorDigitos } from "@/gmail/resolver-cuenta";
 
@@ -67,25 +68,56 @@ export async function procesarCorreo(email: RawEmail, gmailMessageId?: string): 
 
   const esTransferenciaInterna = parsed.esTransferenciaInterna || pareceNombrePropio(parsed.comercio);
   const categoriaIdPorNombre = await obtenerCategoriaIdPorNombre();
+  const { sugerirConIa } = await obtenerConfiguracionIA();
 
-  let nombreCategoria: string | null = null;
+  let categoriaId: number | null = null;
   let categoriaConfirmada = false;
   if (!esTransferenciaInterna && parsed.tipo !== "devolucion") {
-    nombreCategoria = categorizar(parsed.tipo, parsed.comercio);
-    if (nombreCategoria !== null) {
-      categoriaConfirmada = true; // Capa 1: regla directa por comercio/tipo
-    } else {
-      // Capa 2 (roadmap §5): ninguna regla matcheó, se le pasa a Claude.
-      // Nace como sugerencia, no confirmada (roadmap §8) — el usuario la
-      // confirma o corrige desde Movimientos.
-      nombreCategoria = await categorizarConIA(
-        { tipo: parsed.tipo, comercio: parsed.comercio, descripcion, monto },
+    // Paso 1: Categorización por tipo (pagos de servicios)
+    const nombrePorTipo = categorizarPorTipo(parsed.tipo);
+    if (nombrePorTipo !== null) {
+      categoriaId = categoriaIdPorNombre.get(nombrePorTipo) ?? null;
+      categoriaConfirmada = true;
+    } else if (parsed.comercio) {
+      // Paso 2: Búsqueda en reglas de la BD (aprendidas)
+      const categoriaIdBD = await buscarReglaPorComercio(parsed.comercio);
+      if (categoriaIdBD !== null) {
+        categoriaId = categoriaIdBD;
+        categoriaConfirmada = true;
+      } else {
+        // Paso 3: Array hardcodeado de reglas por comercio
+        const nombrePorComercio = categorizarPorComercio(parsed.comercio);
+        if (nombrePorComercio !== null) {
+          categoriaId = categoriaIdPorNombre.get(nombrePorComercio) ?? null;
+          categoriaConfirmada = true;
+        } else {
+          // Paso 4: Capa 2 (roadmap §5) — categorización con IA, si está
+          // prendida en Configuración. Nace como sugerencia, no confirmada
+          // (roadmap §8) — el usuario la confirma o corrige desde Movimientos.
+          const nombrePorIA = sugerirConIa
+            ? await categorizarConIA(
+                { tipo: parsed.tipo, comercio: parsed.comercio, descripcion, monto },
+                [...categoriaIdPorNombre.keys()]
+              )
+            : null;
+          if (nombrePorIA) {
+            categoriaId = categoriaIdPorNombre.get(nombrePorIA) ?? null;
+          }
+          categoriaConfirmada = false;
+        }
+      }
+    } else if (sugerirConIa) {
+      // Sin comercio y no es pago_servicio — intenta con IA
+      const nombrePorIA = await categorizarConIA(
+        { tipo: parsed.tipo, comercio: parsed.comercio ?? "", descripcion, monto },
         [...categoriaIdPorNombre.keys()]
       );
+      if (nombrePorIA) {
+        categoriaId = categoriaIdPorNombre.get(nombrePorIA) ?? null;
+      }
       categoriaConfirmada = false;
     }
   }
-  const categoriaId = nombreCategoria ? categoriaIdPorNombre.get(nombreCategoria) ?? null : null;
 
   let cuentaDestinoId: number | null = null;
   if (parsed.esTransferenciaInterna && parsed.banco === "bcp") {

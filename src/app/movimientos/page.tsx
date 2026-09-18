@@ -1,4 +1,11 @@
-import { listarCategorias, listarCuentas, resumenMes, transaccionesDelMes } from "@/db/queries";
+import {
+  listarCategorias,
+  listarCuentas,
+  listarTags,
+  resumenMes,
+  tagsPorTransaccion,
+  transaccionesDelMes,
+} from "@/db/queries";
 import { MovimientosView } from "./MovimientosView";
 
 export const dynamic = "force-dynamic";
@@ -9,12 +16,14 @@ function mesActual(): string {
 
 export default async function MovimientosPage() {
   const mes = mesActual();
-  const [cuentas, categorias, transacciones, resumen] = await Promise.all([
+  const [cuentas, categorias, transacciones, resumen, tags] = await Promise.all([
     listarCuentas(),
     listarCategorias(),
-    transaccionesDelMes(mes),
+    transaccionesDelMes(mes, 50, 0),
     resumenMes(mes),
+    listarTags(),
   ]);
+  const tagsPorTx = await tagsPorTransaccion(transacciones.map((t) => t.id));
 
   return (
     <div className="screen">
@@ -25,7 +34,14 @@ export default async function MovimientosPage() {
 
       <div className="dashboard-grid">
         <div className="col-main">
-          <MovimientosView cuentas={cuentas} categorias={categorias} transacciones={transacciones} />
+          <MovimientosView
+            cuentas={cuentas}
+            categorias={categorias}
+            transacciones={transacciones}
+            tags={tags}
+            tagsPorTxInicial={tagsPorTx}
+            mes={mes}
+          />
         </div>
 
         <div className="col-side">

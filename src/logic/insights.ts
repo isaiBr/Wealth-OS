@@ -1,4 +1,4 @@
-import type { FilaPresupuesto } from "@/db/queries";
+import type { FilaPresupuesto, FondoEmergenciaInfo, GastoHormiga } from "@/db/queries";
 
 export interface Insight {
   tipo: "warn" | "good" | "info";
@@ -12,6 +12,8 @@ export interface ContextoInsights {
   presupuesto: FilaPresupuesto[];
   sinCategorizar: number;
   resumen: { ingresos: number; gastos: number; transferenciasInternas: number };
+  fondo?: FondoEmergenciaInfo | null;
+  gastoHormiga?: GastoHormiga | null;
 }
 
 type Regla = (ctx: ContextoInsights) => Insight | null;
@@ -89,11 +91,36 @@ const reglaGastoDelMes: Regla = (ctx) => {
   };
 };
 
+const reglaProyeccionFondo: Regla = (ctx) => {
+  if (!ctx.fondo || ctx.fondo.saldoActual >= ctx.fondo.metaMonto) return null;
+  const faltante = ctx.fondo.metaMonto - ctx.fondo.saldoActual;
+  return {
+    tipo: "info",
+    eyebrow: "Fondo de emergencia",
+    numero: `${Math.round(100 * (ctx.fondo.saldoActual / ctx.fondo.metaMonto))}%`,
+    corto: `faltan S/ ${faltante.toFixed(0)} para completar`,
+    largo: `Tu fondo de emergencia está al ${Math.round(100 * (ctx.fondo.saldoActual / ctx.fondo.metaMonto))}% de la meta (${ctx.fondo.metaMeses} meses de gastos fijos). Te faltan S/ ${faltante.toFixed(2)}.`,
+  };
+};
+
+const reglaGastoHormiga: Regla = (ctx) => {
+  if (!ctx.gastoHormiga || ctx.gastoHormiga.totalMes <= 0) return null;
+  return {
+    tipo: "good",
+    eyebrow: "Gasto hormiga",
+    numero: `S/ ${ctx.gastoHormiga.proyeccionAnual.toFixed(0)}/año`,
+    corto: `en compras de menos de S/ 20`,
+    largo: `Este mes suma S/ ${ctx.gastoHormiga.totalMes.toFixed(2)} en compras chicas (< S/ 20) — proyectadas a ${ctx.gastoHormiga.proyeccionAnual.toFixed(2)}/año. Ojo con el goteo.`,
+  };
+};
+
 const CATALOGO: Regla[] = [
   reglaCategoriaSobreLimite,
   reglaCategoriaCercaLimite,
   reglaSinCategorizar,
   reglaTransferenciasInternas,
+  reglaProyeccionFondo,
+  reglaGastoHormiga,
   reglaGastoDelMes,
 ];
 

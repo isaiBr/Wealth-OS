@@ -28,6 +28,20 @@ const ITEMS = [
     label: "Cuentas",
     icon: <path d="M3 6h18v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2ZM3 10h18M7 15h4" />,
   },
+  {
+    href: "/configuracion",
+    label: "Config",
+    icon: (
+      <>
+        <line x1="4" y1="6" x2="20" y2="6" />
+        <circle cx="9" cy="6" r="2" fill="var(--surface)" />
+        <line x1="4" y1="12" x2="20" y2="12" />
+        <circle cx="15" cy="12" r="2" fill="var(--surface)" />
+        <line x1="4" y1="18" x2="20" y2="18" />
+        <circle cx="7" cy="18" r="2" fill="var(--surface)" />
+      </>
+    ),
+  },
 ];
 
 function Icon({ children }: { children: React.ReactNode }) {

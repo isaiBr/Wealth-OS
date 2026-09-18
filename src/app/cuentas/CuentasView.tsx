@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
-import { crearCuentaAction, alternarDestacadaAction, actualizarBilleteraAction } from "./actions";
+import { crearCuentaAction, alternarDestacadaAction, editarCuentaAction } from "./actions";
 
 interface CuentaConSaldo {
   id: number;
@@ -17,7 +17,7 @@ interface CuentaConSaldo {
 export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
-  const [editandoBilletera, setEditandoBilletera] = useState<CuentaConSaldo | null>(null);
+  const [editandoCuenta, setEditandoCuenta] = useState<CuentaConSaldo | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setGuardando(true);
@@ -29,11 +29,11 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
     }
   }
 
-  async function handleSubmitBilletera(formData: FormData) {
+  async function handleEditarCuenta(formData: FormData) {
     setGuardando(true);
     try {
-      await actualizarBilleteraAction(formData);
-      setEditandoBilletera(null);
+      await editarCuentaAction(formData);
+      setEditandoCuenta(null);
     } finally {
       setGuardando(false);
     }
@@ -80,9 +80,9 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
               <button
                 type="button"
                 className="edit-btn"
-                aria-label={`Editar billetera de ${c.nombre}`}
-                title="Billetera vinculada (Yape/Plin)"
-                onClick={() => setEditandoBilletera(c)}
+                aria-label={`Editar cuenta ${c.nombre}`}
+                title="Editar nombre y billetera"
+                onClick={() => setEditandoCuenta(c)}
               >
                 ✎
               </button>
@@ -137,23 +137,27 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
         </Modal>
       )}
 
-      {editandoBilletera && (
-        <Modal onClose={() => setEditandoBilletera(null)}>
+      {editandoCuenta && (
+        <Modal onClose={() => setEditandoCuenta(null)}>
           <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
-            Billetera vinculada — {editandoBilletera.nombre}
+            Editar cuenta
           </h2>
-          <form action={handleSubmitBilletera}>
-            <input type="hidden" name="cuentaId" value={editandoBilletera.id} />
+          <form action={handleEditarCuenta}>
+            <input type="hidden" name="cuentaId" value={editandoCuenta.id} />
+            <div className="field">
+              <label htmlFor="nombre-cuenta">Nombre / alias</label>
+              <input id="nombre-cuenta" name="nombre" type="text" defaultValue={editandoCuenta.nombre} required />
+            </div>
             <div className="field">
               <label htmlFor="billetera">Yape/Plin ligado a esta cuenta</label>
-              <select id="billetera" name="billetera" defaultValue={editandoBilletera.billetera ?? ""}>
+              <select id="billetera" name="billetera" defaultValue={editandoCuenta.billetera ?? ""}>
                 <option value="">Ninguna</option>
                 <option value="yape">Yape</option>
                 <option value="plin">Plin</option>
               </select>
             </div>
             <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={() => setEditandoBilletera(null)} disabled={guardando}>
+              <button type="button" className="btn-secondary" onClick={() => setEditandoCuenta(null)} disabled={guardando}>
                 Cancelar
               </button>
               <button type="submit" className="btn-primary" disabled={guardando}>

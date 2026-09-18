@@ -231,6 +231,15 @@ button {
   }
 }
 
+/* Los ítems de un grid no se achican por debajo del ancho de su contenido a
+   menos que se les diga explícitamente — sin esto, una fila de Movimientos
+   con un comercio/descripción muy largo (ej. el texto crudo de un correo)
+   fuerza a col-main a crecer y empuja col-side fuera de la pantalla. */
+.col-main,
+.col-side {
+  min-width: 0;
+}
+
 /* ---------- card / secciones ---------- */
 .card {
   background: var(--surface);
@@ -934,6 +943,11 @@ button {
   background: none;
   border: 1px dashed var(--accent-strong);
 }
+.tx-cat-pill.excluded {
+  background: none;
+  border: 1px dashed var(--ink-faint);
+  color: var(--ink-faint);
+}
 .tx-amount {
   font-size: 14.5px;
   flex-shrink: 0;
@@ -1056,6 +1070,47 @@ button {
 .cat-bar-fill.over {
   background: var(--danger);
 }
+.cat-expand-btn {
+  background: none;
+  border: none;
+  color: var(--ink-faint);
+  cursor: pointer;
+  padding: 2px;
+  display: inline-flex;
+  flex-shrink: 0;
+  transition: transform 0.15s, color 0.15s;
+}
+.cat-expand-btn svg {
+  width: 14px;
+  height: 14px;
+}
+.cat-expand-btn:hover {
+  color: var(--ink-muted);
+}
+.cat-expand-btn.open svg {
+  transform: rotate(180deg);
+}
+.cat-breakdown {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.cat-breakdown-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.cat-breakdown-row .nombre {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+}
 .cat-flag {
   display: flex;
   align-items: center;
@@ -1085,6 +1140,215 @@ button {
   color: var(--ink-faint);
   padding: 20px 0;
   text-align: center;
+}
+
+/* ---------- etiquetas / tags (Configuración, Movimientos) ---------- */
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tx-tag-pill {
+  background: var(--surface-sunken);
+  color: var(--ink-muted);
+  font-size: 10.5px;
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+.tag-cloud .tx-tag-pill {
+  font-size: 12px;
+  padding: 5px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tag-cloud .tx-tag-pill button {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+}
+.tag-cloud .tx-tag-pill button:hover {
+  opacity: 1;
+}
+.tx-tag-pill.add {
+  background: none;
+  border: 1px dashed var(--ink-faint);
+  color: var(--ink-faint);
+  cursor: pointer;
+}
+.tx-tag-pill.add:hover {
+  border-color: var(--accent-strong);
+  color: var(--accent-strong);
+}
+/* Toggle dentro del picker rápido — pill clickeable, resaltada si está activa */
+button.tx-tag-pill.toggle {
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 10px;
+}
+button.tx-tag-pill.toggle.active {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-color: var(--accent-strong);
+}
+
+/* ---------- badge IA (Configuración) ---------- */
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 5px;
+  flex-shrink: 0;
+}
+
+/* ---------- categorías editables (Configuración) ---------- */
+.cfg-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border);
+}
+.cfg-row:last-child {
+  border-bottom: none;
+}
+.cfg-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+.cfg-info {
+  min-width: 0;
+}
+.cfg-nombre {
+  font-size: 13.5px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+.cfg-meta {
+  font-size: 11.5px;
+  color: var(--ink-muted);
+  margin-top: 2px;
+}
+.cfg-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 0;
+}
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 36px;
+  height: 21px;
+  flex-shrink: 0;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.switch .track {
+  position: absolute;
+  inset: 0;
+  background: var(--surface-sunken);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: background 0.15s;
+  cursor: pointer;
+}
+.switch .track:before {
+  content: "";
+  position: absolute;
+  width: 15px;
+  height: 15px;
+  left: 2px;
+  top: 2px;
+  background: var(--surface);
+  border-radius: 50%;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: transform 0.15s;
+}
+.switch input:checked + .track {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.switch input:checked + .track:before {
+  transform: translateX(15px);
+  background: #fff;
+}
+.switch input:disabled + .track {
+  opacity: 0.6;
+  cursor: default;
+}
+
+/* ---------- reglas de categorización (Configuración) ---------- */
+.rule-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--border);
+}
+.rule-row:last-child {
+  border-bottom: none;
+}
+.rule-info {
+  min-width: 0;
+}
+.rule-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.rule-patron {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11.5px;
+  background: var(--surface-sunken);
+  color: var(--ink);
+  padding: 2px 6px;
+  border-radius: 5px;
+  display: inline-block;
+  max-width: 220px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+}
+.rule-arrow {
+  color: var(--ink-faint);
+}
+.rule-cat {
+  font-weight: 600;
+}
+.rule-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--ink-muted);
+  margin-top: 4px;
 }
 
 /* ---------- formularios ---------- */

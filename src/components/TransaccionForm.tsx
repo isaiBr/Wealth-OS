@@ -99,11 +99,13 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
           <label htmlFor="categoriaId">Categoría</label>
           <select id="categoriaId" name="categoriaId" defaultValue={transaccion?.categoriaId ?? ""}>
             <option value="">Sin categoría</option>
-            {categorias.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
+            {categorias
+              .filter((c) => !c.archivada || c.id === transaccion?.categoriaId)
+              .map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
           </select>
         </div>
 
@@ -111,6 +113,12 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
           <label htmlFor="fecha">Fecha</label>
           <input id="fecha" name="fecha" type="date" defaultValue={fechaDefault} required />
         </div>
+
+        {esEdicion && (
+          <p className="section-sub" style={{ marginTop: -4, marginBottom: 4 }}>
+            Las etiquetas y &ldquo;sin contabilizar&rdquo; se manejan desde el botón + etiqueta de la fila, sin abrir este formulario.
+          </p>
+        )}
 
         <div className="modal-actions">
           <button type="button" className="btn-secondary" onClick={onClose} disabled={guardando}>

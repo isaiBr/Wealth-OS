@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
-import { crearCobranzaAction, marcarCobranzaCobradaAction, eliminarCobranzaAction } from "./actions";
+import { crearCobranzaAction, editarCobranzaAction, marcarCobranzaCobradaAction, eliminarCobranzaAction } from "./actions";
 import type { Cobranza } from "@/db/queries";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [editando, setEditando] = useState<Cobranza | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [procesandoId, setProcesandoId] = useState<number | null>(null);
 
@@ -21,6 +22,16 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
     try {
       await crearCobranzaAction(formData);
       setModalAbierto(false);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  async function handleEditar(formData: FormData) {
+    setGuardando(true);
+    try {
+      await editarCobranzaAction(formData);
+      setEditando(null);
     } finally {
       setGuardando(false);
     }
@@ -65,7 +76,14 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
                 style={i > 0 ? { marginTop: 8 } : undefined}
               >
                 <div className="cuenta-info" style={{ minWidth: 0 }}>
-                  <div className="nombre-cuenta" style={{ color: "var(--ink)" }}>{c.descripcion}</div>
+                  <button
+                    type="button"
+                    className="tx-merchant"
+                    style={{ color: "var(--ink)", textAlign: "left" }}
+                    onClick={() => setEditando(c)}
+                  >
+                    {c.descripcion}
+                  </button>
                 </div>
                 <div className="row-right">
                   <div className="saldo tabular" style={{ color: "var(--accent-strong)" }}>
@@ -160,6 +178,41 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
             </div>
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={() => setModalAbierto(false)} disabled={guardando}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary" disabled={guardando}>
+                {guardando ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {editando && (
+        <Modal onClose={() => setEditando(null)}>
+          <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
+            Editar cobranza
+          </h2>
+          <form action={handleEditar}>
+            <input type="hidden" name="id" value={editando.id} />
+            <div className="field">
+              <label htmlFor="descripcion-editar">Descripción</label>
+              <input id="descripcion-editar" name="descripcion" type="text" defaultValue={editando.descripcion} required />
+            </div>
+            <div className="field">
+              <label htmlFor="montoEsperado-editar">Monto esperado (S/)</label>
+              <input
+                id="montoEsperado-editar"
+                name="montoEsperado"
+                type="number"
+                step="0.01"
+                min="0.01"
+                defaultValue={editando.montoEsperado.toFixed(2)}
+                required
+              />
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setEditando(null)} disabled={guardando}>
                 Cancelar
               </button>
               <button type="submit" className="btn-primary" disabled={guardando}>

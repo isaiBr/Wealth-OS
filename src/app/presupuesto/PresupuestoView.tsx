@@ -2,14 +2,20 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
-import { editarLimiteAction } from "./actions";
-import type { FilaPresupuesto } from "@/db/queries";
+import { editarLimiteAction, obtenerDesgloseEtiquetasAction } from "./actions";
+import type { FilaPresupuesto, DesgloseEtiqueta } from "@/db/queries";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 const ICONO_ALERTA = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6">
     <path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" />
+  </svg>
+);
+
+const ICONO_CHEVRON = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M6 9l6 6 6-6" />
   </svg>
 );
 
@@ -20,9 +26,20 @@ function estadoBarra(pct: number | null): "" | "warn" | "over" {
   return "";
 }
 
-export function PresupuestoView({ filas, sinCategorizar }: { filas: FilaPresupuesto[]; sinCategorizar: number }) {
+export function PresupuestoView({
+  filas,
+  sinCategorizar,
+  mes,
+}: {
+  filas: FilaPresupuesto[];
+  sinCategorizar: number;
+  mes: string;
+}) {
   const [editando, setEditando] = useState<FilaPresupuesto | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [expandido, setExpandido] = useState<number | null>(null);
+  const [desgloses, setDesgloses] = useState<Map<number, DesgloseEtiqueta[]>>(new Map());
+  const [cargandoDesglose, setCargandoDesglose] = useState<number | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setGuardando(true);
@@ -34,15 +51,45 @@ export function PresupuestoView({ filas, sinCategorizar }: { filas: FilaPresupue
     }
   }
 
+  async function toggleExpandir(categoriaId: number) {
+    if (expandido === categoriaId) {
+      setExpandido(null);
+      return;
+    }
+    setExpandido(categoriaId);
+    if (!desgloses.has(categoriaId)) {
+      setCargandoDesglose(categoriaId);
+      try {
+        const filas = await obtenerDesgloseEtiquetasAction(categoriaId, mes);
+        setDesgloses(new Map(desgloses).set(categoriaId, filas));
+      } finally {
+        setCargandoDesglose(null);
+      }
+    }
+  }
+
   return (
     <>
       <div className="card">
         {filas.map(({ categoria, gasto, pctUsado, sinMovimiento }) => {
           const estado = estadoBarra(pctUsado);
+          const abierto = expandido === categoria.id;
           return (
             <div className={`cat-row${sinMovimiento ? " zero" : ""}`} key={categoria.id}>
               <div className="cat-top">
-                <span>{categoria.nombre}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, minWidth: 0 }}>
+                  {!sinMovimiento && (
+                    <button
+                      className={`cat-expand-btn${abierto ? " open" : ""}`}
+                      type="button"
+                      aria-label={`Ver desglose por etiqueta de ${categoria.nombre}`}
+                      onClick={() => toggleExpandir(categoria.id)}
+                    >
+                      {ICONO_CHEVRON}
+                    </button>
+                  )}
+                  {categoria.nombre}
+                </span>
                 <span className="row-right">
                   <span className="cifras">
                     <strong className="tabular">S/ {FORMATO.format(gasto)}</strong>
@@ -69,6 +116,22 @@ export function PresupuestoView({ filas, sinCategorizar }: { filas: FilaPresupue
               )}
               {estado === "warn" && <div className="cat-flag warn">{ICONO_ALERTA}Cerca del límite</div>}
               {sinMovimiento && <div className="cat-zero-note">Sin movimiento este mes</div>}
+              {abierto && (
+                <div className="cat-breakdown">
+                  {cargandoDesglose === categoria.id && <span className="cat-zero-note">Cargando...</span>}
+                  {cargandoDesglose !== categoria.id && (desgloses.get(categoria.id)?.length ?? 0) === 0 && (
+                    <span className="cat-zero-note">Sin etiquetas asignadas todavía.</span>
+                  )}
+                  {desgloses.get(categoria.id)?.map((d) => (
+                    <div className="cat-breakdown-row" key={d.nombre}>
+                      <span className="nombre">
+                        <span className="tx-tag-pill">{d.nombre}</span>
+                      </span>
+                      <span className="tabular">S/ {FORMATO.format(d.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           );
         })}

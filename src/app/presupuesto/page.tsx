@@ -1,6 +1,15 @@
-import { agruparPorBucket, cuotasActivas, gastoHormigaAnualizado, presupuestoPorCategoria } from "@/db/queries";
+import {
+  agruparPorBucket,
+  cuotasActivas,
+  gastoHormigaAnualizado,
+  listarComprasCuotas,
+  listarMetasCompra,
+  presupuestoPorCategoria,
+  suscripcionesDelMes,
+} from "@/db/queries";
 import { PresupuestoView } from "./PresupuestoView";
 import { CuotasView } from "./CuotasView";
+import { MetasCompraView } from "./MetasCompraView";
 
 export const dynamic = "force-dynamic";
 
@@ -18,9 +27,13 @@ function mesActual(): string {
 }
 
 export default async function PresupuestoPage() {
-  const { filas, sinCategorizar } = await presupuestoPorCategoria(mesActual());
+  const mes = mesActual();
+  const { filas, sinCategorizar } = await presupuestoPorCategoria(mes);
   const { filas: cuotas, totalMensual: totalCuotas } = await cuotasActivas();
-  const hormiga = await gastoHormigaAnualizado(mesActual());
+  const hormiga = await gastoHormigaAnualizado(mes);
+  const suscripciones = await suscripcionesDelMes(mes);
+  const metas = await listarMetasCompra();
+  const comprasCuotas = await listarComprasCuotas();
   const porBucket = agruparPorBucket(filas);
   const gastoDelMes = filas.reduce((acc, f) => acc + f.gasto, 0);
 
@@ -56,10 +69,12 @@ export default async function PresupuestoPage() {
             })}
           </div>
 
+          <MetasCompraView metas={metas} comprasCuotas={comprasCuotas} />
+
           <div className="section-head">
             <div className="section-title">Presupuesto por categoría</div>
           </div>
-          <PresupuestoView filas={filas} sinCategorizar={sinCategorizar} />
+          <PresupuestoView filas={filas} sinCategorizar={sinCategorizar} mes={mes} />
         </div>
 
         <div className="col-side">
@@ -93,13 +108,33 @@ export default async function PresupuestoPage() {
           )}
 
           <div className="section-head">
-            <div className="section-title">Suscripciones</div>
+            <div>
+              <div className="section-title">Suscripciones</div>
+              <div className="section-sub">Movimientos con categoría o etiqueta &ldquo;Suscripciones&rdquo; este mes</div>
+            </div>
           </div>
           <div className="card">
-            <p className="empty-note">
-              Todavía no se detectó ninguna — se sugieren solas cuando un mismo comercio y monto se repita
-              ~mensualmente (roadmap §8). Necesita al menos 2 meses de historial para detectar el patrón.
-            </p>
+            {suscripciones.filas.length === 0 ? (
+              <p className="empty-note">
+                Ninguna este mes — asignale la categoría o una etiqueta &ldquo;Suscripciones&rdquo; a un movimiento
+                en Movimientos para que aparezca acá.
+              </p>
+            ) : (
+              <>
+                <div className="hormiga-list">
+                  {suscripciones.filas.map((s) => (
+                    <div className="hormiga-row" key={s.nombre}>
+                      <span className="n">{s.nombre}</span>
+                      <span className="tabular">S/ {FORMATO.format(s.monto)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="hormiga-total">
+                  <span className="label">Total este mes</span>
+                  <span className="valor tabular">S/ {FORMATO.format(suscripciones.total)}</span>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="section-head">

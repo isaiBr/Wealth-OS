@@ -3,12 +3,15 @@ import {
   agruparPorBucket,
   cuotasActivas,
   deudaPendiente,
+  gastoHormigaAnualizado,
   listarCategorias,
   listarCuentas,
+  obtenerFondoEmergencia,
   patrimonioHistorico,
   presupuestoPorCategoria,
   resumenMes,
   saldoCuenta,
+  suscripcionesDelMes,
   transaccionesDelMes,
 } from "@/db/queries";
 import { evaluarInsights } from "@/logic/insights";
@@ -85,9 +88,13 @@ export default async function InicioPage() {
     .map((c, i) => ({ cuenta: c, saldo: saldos[i] }))
     .filter((x) => x.cuenta.destacada);
   const resumen = await resumenMes(mes);
-  const recientes = (await transaccionesDelMes(mes)).slice(0, 3);
+  const recientes = (await transaccionesDelMes(mes, 50, 0)).slice(0, 3);
   const { filas: presupuesto, sinCategorizar } = await presupuestoPorCategoria(mes);
-  const insights = evaluarInsights({ presupuesto, sinCategorizar, resumen });
+  const [fondo, gastoHormiga] = await Promise.all([
+    obtenerFondoEmergencia(),
+    gastoHormigaAnualizado(mes),
+  ]);
+  const insights = evaluarInsights({ presupuesto, sinCategorizar, resumen, fondo, gastoHormiga });
   const categorias = await listarCategorias();
   const cuentaPorId = new Map(cuentas.map((c) => [c.id, c]));
   const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
@@ -128,12 +135,18 @@ export default async function InicioPage() {
   const { totalMensual: totalCuotas } = await cuotasActivas();
   const deudas = await deudaPendiente();
   const totalDeuda = deudas.reduce((acc, d) => acc + d.saldo, 0);
+  const { total: totalSuscripciones } = await suscripcionesDelMes(mes);
 
   // "Fijos pendientes" (facturas fijas aún no cobradas este mes) queda en 0
   // — no hay todavía un registro de gastos fijos recurrentes esperados con
   // fecha; cuotas y apartado de ahorro sí son calculables con datos reales.
   const fijosPendientes = 0;
   const apartadoAhorro = porBucket.ahorro ?? 0;
+  // "Sin contabilizar" NO ajusta esto a propósito: si de verdad te reembolsan
+  // (ver flujo esperado en la doc de la transacción), esa entrada se registra
+  // como ingreso real y el saldo de cuenta ya queda correcto solo — inventar
+  // un ajuste acá encima sería contarlo dos veces. Mientras no llegue el
+  // reembolso, esa plata de verdad no está disponible hoy.
   const disponibleReal = saldoTotal - fijosPendientes - totalCuotas - apartadoAhorro;
 
   // --- Patrimonio neto: reconstruido de las transacciones, sin snapshots ---
@@ -251,6 +264,7 @@ export default async function InicioPage() {
         </div>
       )}
 
+      <div className="stats-label">Tu mes en números</div>
       <div className="stats-grid">
         <div className="stat">
           <div className="label">Ingreso del mes</div>
@@ -282,7 +296,7 @@ export default async function InicioPage() {
           </div>
           <div className="commit-body">
             <span className="commit-label">Suscripciones</span>
-            <span className="commit-val tabular">S/ 0.00</span>
+            <span className="commit-val tabular">S/ {totalSuscripciones.toFixed(2)}</span>
           </div>
         </Link>
         <Link href="/presupuesto" className="commit-chip">
@@ -366,8 +380,16 @@ export default async function InicioPage() {
                   <div className="cat-top">
                     <span>{categoria.nombre}</span>
                     <span className="cifras">
-                      <strong className="tabular">S/ {FORMATO.format(gasto)}</strong>
-                      {categoria.limiteMensual ? ` / S/ ${FORMATO.format(categoria.limiteMensual)}` : ""}
+                      {categoria.limiteMensual ? (
+                        <>
+                          <strong className="tabular">S/ {FORMATO.format(gasto)}</strong>
+                          {` / S/ ${FORMATO.format(categoria.limiteMensual)}`}
+                        </>
+                      ) : (
+                        <Link href="/presupuesto" className="text-link">
+                          Configura un límite →
+                        </Link>
+                      )}
                     </span>
                   </div>
                   {!sinMovimiento && categoria.limiteMensual !== null && (

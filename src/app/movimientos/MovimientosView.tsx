@@ -1,13 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { Modal } from "@/components/Modal";
 import { TransaccionForm } from "@/components/TransaccionForm";
-import type { Cuenta, Categoria, Transaccion } from "@/db/queries";
+import { obtenerTransaccionesAction, alternarTagAction, alternarExcluidaAction } from "./actions";
+import type { Cuenta, Categoria, Transaccion, Tag } from "@/db/queries";
 
 interface Props {
   cuentas: Cuenta[];
   categorias: Categoria[];
   transacciones: Transaccion[];
+  tags: Tag[];
+  tagsPorTxInicial: Map<number, Tag[]>;
+  mes: string;
 }
 
 const FORMATO_DIA = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short" });
@@ -29,12 +34,36 @@ function etiquetaDia(fechaISO: string): string {
   return FORMATO_DIA.format(fecha);
 }
 
-export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
+export function MovimientosView({ cuentas, categorias, transacciones: inicial, tags, tagsPorTxInicial, mes }: Props) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<Transaccion | undefined>(undefined);
+  const [gestionandoId, setGestionandoId] = useState<number | null>(null);
+  const [transacciones, setTransacciones] = useState(inicial);
+  const [tagsPorTx, setTagsPorTx] = useState(tagsPorTxInicial);
+  const [inicialAnterior, setInicialAnterior] = useState(inicial);
+  const [offset, setOffset] = useState(50);
+  const [cargando, setCargando] = useState(false);
+  const [hayMas, setHayMas] = useState(inicial.length === 50);
+
+  // `inicial` cambia cada vez que el servidor re-renderiza esta pantalla con
+  // datos frescos (ej. después de editar una transacción, que invalida la
+  // ruta con revalidatePath). El estado local de más arriba solo se usa para
+  // poder ir agregando páginas con "Cargar más" — sin este ajuste, quedaría
+  // pegado a la primera carga y no reflejaría ediciones hasta desmontar el
+  // componente (cambiar de tab y volver). Se ajusta durante el render en vez
+  // de con useEffect (patrón recomendado por React para "resetear estado
+  // cuando cambia una prop" — evita una vuelta extra de render/commit).
+  if (inicial !== inicialAnterior) {
+    setInicialAnterior(inicial);
+    setTransacciones(inicial);
+    setTagsPorTx(tagsPorTxInicial);
+    setOffset(50);
+    setHayMas(inicial.length === 50);
+  }
 
   const cuentaPorId = new Map(cuentas.map((c) => [c.id, c]));
   const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
+  const gestionando = transacciones.find((t) => t.id === gestionandoId);
 
   const grupos = new Map<string, Transaccion[]>();
   for (const t of transacciones) {
@@ -52,6 +81,36 @@ export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
   function abrirCreacion() {
     setEditando(undefined);
     setModalAbierto(true);
+  }
+
+  async function cargarMas() {
+    setCargando(true);
+    try {
+      const { transacciones: nuevas, tagsPorTx: tagsNuevos } = await obtenerTransaccionesAction(mes, offset);
+      setTransacciones([...transacciones, ...nuevas]);
+      setTagsPorTx(new Map([...tagsPorTx, ...tagsNuevos]));
+      setOffset(offset + 50);
+      setHayMas(nuevas.length === 50);
+    } finally {
+      setCargando(false);
+    }
+  }
+
+  // Toque = cambio, al toque. Sin esperar el round-trip: se actualiza el
+  // estado local ya mismo y la acción de servidor corre atrás.
+  function toggleTag(transaccionId: number, tag: Tag) {
+    const actuales = tagsPorTx.get(transaccionId) ?? [];
+    const activo = actuales.some((t) => t.id === tag.id);
+    const nuevoMapa = new Map(tagsPorTx);
+    nuevoMapa.set(transaccionId, activo ? actuales.filter((t) => t.id !== tag.id) : [...actuales, tag]);
+    setTagsPorTx(nuevoMapa);
+    alternarTagAction(transaccionId, tag.id, !activo);
+  }
+
+  function toggleExcluida(t: Transaccion) {
+    const nuevoValor = !t.excluida;
+    setTransacciones(transacciones.map((x) => (x.id === t.id ? { ...x, excluida: nuevoValor } : x)));
+    alternarExcluidaAction(t.id, nuevoValor);
   }
 
   return (
@@ -84,6 +143,7 @@ export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
               const cuenta = cuentaPorId.get(t.cuentaId);
               const categoria = t.categoriaId ? categoriaPorId.get(t.categoriaId) : undefined;
               const esIngreso = t.tipo === "ingreso" || t.tipo === "devolucion";
+              const tagsDeEsta = tagsPorTx.get(t.id) ?? [];
               return (
                 <div className={`tx${t.esTransferenciaInterna ? " transfer" : ""}`} key={t.id}>
                   <div className="tx-left">
@@ -103,6 +163,20 @@ export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
                             {categoria?.nombre ?? "Sin categoría"}
                           </span>
                         )}
+                        {t.excluida && <span className="tx-cat-pill excluded">Sin contabilizar</span>}
+                        {tagsDeEsta.map((tag) => (
+                          <span className="tx-tag-pill" key={tag.id}>
+                            {tag.nombre}
+                          </span>
+                        ))}
+                        <button
+                          className="tx-tag-pill add"
+                          type="button"
+                          aria-label={`Etiquetas y "sin contabilizar" de ${t.comercio || "este movimiento"}`}
+                          onClick={() => setGestionandoId(t.id)}
+                        >
+                          + etiqueta
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -114,15 +188,69 @@ export function MovimientosView({ cuentas, categorias, transacciones }: Props) {
             })}
           </div>
         ))}
+        {hayMas && (
+          <div style={{ padding: "12px 0", textAlign: "center" }}>
+            <button
+              className="btn-secondary"
+              onClick={cargarMas}
+              disabled={cargando}
+              style={{ width: "100%" }}
+            >
+              {cargando ? "Cargando..." : "Cargar más movimientos ↓"}
+            </button>
+          </div>
+        )}
       </div>
 
       {modalAbierto && (
-        <TransaccionForm
-          cuentas={cuentas}
-          categorias={categorias}
-          transaccion={editando}
-          onClose={() => setModalAbierto(false)}
-        />
+        <TransaccionForm cuentas={cuentas} categorias={categorias} transaccion={editando} onClose={() => setModalAbierto(false)} />
+      )}
+
+      {gestionando && (
+        <Modal onClose={() => setGestionandoId(null)}>
+          <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
+            {gestionando.comercio || "(sin descripción)"}
+          </h2>
+          <div className="field">
+            <label>Etiquetas</label>
+            <div className="tag-cloud">
+              {tags.length === 0 && (
+                <span className="section-sub" style={{ margin: 0 }}>
+                  No hay etiquetas creadas — andá a Configuración para crear alguna.
+                </span>
+              )}
+              {tags.map((tag) => {
+                const activo = (tagsPorTx.get(gestionando.id) ?? []).some((t) => t.id === tag.id);
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    className={`tx-tag-pill toggle${activo ? " active" : ""}`}
+                    onClick={() => toggleTag(gestionando.id, tag)}
+                  >
+                    {tag.nombre}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <div className="field" style={{ marginTop: 16 }}>
+            <label htmlFor="excluida-quick" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+              <input
+                id="excluida-quick"
+                type="checkbox"
+                checked={gestionando.excluida}
+                onChange={() => toggleExcluida(gestionando)}
+              />
+              Sin contabilizar (excluir de totales de gasto/ingreso)
+            </label>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn-primary" onClick={() => setGestionandoId(null)}>
+              Listo
+            </button>
+          </div>
+        </Modal>
       )}
     </>
   );

@@ -16,6 +16,7 @@ function tx(overrides: Partial<Transaccion>): Transaccion {
     categoriaConfirmada: false,
     esTransferenciaInterna: false,
     cuentaDestinoId: null,
+    excluida: false,
     fuente: "email",
     correoRaw: null,
     gmailMessageId: null,
