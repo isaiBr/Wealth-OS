@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { TransaccionForm } from "@/components/TransaccionForm";
-import { obtenerTransaccionesAction, alternarTagAction, alternarExcluidaAction } from "./actions";
+import { obtenerTransaccionesAction, alternarTagAction, alternarExcluidaAction, crearYAsignarTagAction } from "./actions";
 import type { Cuenta, Categoria, Transaccion, Tag } from "@/db/queries";
 
 interface Props {
@@ -44,6 +44,17 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
   const [offset, setOffset] = useState(50);
   const [cargando, setCargando] = useState(false);
   const [hayMas, setHayMas] = useState(inicial.length === 50);
+  const [tagsDisponibles, setTagsDisponibles] = useState(tags);
+  const [tagsAnterior, setTagsAnterior] = useState(tags);
+  const [nuevoTagTexto, setNuevoTagTexto] = useState("");
+  const [creandoTag, setCreandoTag] = useState(false);
+
+  // Mismo patrón que `inicial` arriba: si Configuración crea/archiva una
+  // etiqueta en paralelo, la próxima revalidación trae `tags` actualizado.
+  if (tags !== tagsAnterior) {
+    setTagsAnterior(tags);
+    setTagsDisponibles(tags);
+  }
 
   // `inicial` cambia cada vez que el servidor re-renderiza esta pantalla con
   // datos frescos (ej. después de editar una transacción, que invalida la
@@ -111,6 +122,25 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
     const nuevoValor = !t.excluida;
     setTransacciones(transacciones.map((x) => (x.id === t.id ? { ...x, excluida: nuevoValor } : x)));
     alternarExcluidaAction(t.id, nuevoValor);
+  }
+
+  async function crearYAsignarTag(transaccionId: number) {
+    const nombre = nuevoTagTexto.trim();
+    if (!nombre) return;
+    setCreandoTag(true);
+    try {
+      const tag = await crearYAsignarTagAction(transaccionId, nombre);
+      setTagsDisponibles((actuales) => (actuales.some((t) => t.id === tag.id) ? actuales : [...actuales, tag]));
+      const actuales = tagsPorTx.get(transaccionId) ?? [];
+      if (!actuales.some((t) => t.id === tag.id)) {
+        const nuevoMapa = new Map(tagsPorTx);
+        nuevoMapa.set(transaccionId, [...actuales, tag]);
+        setTagsPorTx(nuevoMapa);
+      }
+      setNuevoTagTexto("");
+    } finally {
+      setCreandoTag(false);
+    }
   }
 
   return (
@@ -214,12 +244,12 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
           <div className="field">
             <label>Etiquetas</label>
             <div className="tag-cloud">
-              {tags.length === 0 && (
+              {tagsDisponibles.length === 0 && (
                 <span className="section-sub" style={{ margin: 0 }}>
-                  No hay etiquetas creadas — andá a Configuración para crear alguna.
+                  Sin etiquetas todavía — creá una abajo.
                 </span>
               )}
-              {tags.map((tag) => {
+              {tagsDisponibles.map((tag) => {
                 const activo = (tagsPorTx.get(gestionando.id) ?? []).some((t) => t.id === tag.id);
                 return (
                   <button
@@ -233,6 +263,28 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
                 );
               })}
             </div>
+            <form
+              style={{ display: "flex", gap: 8, marginTop: 10 }}
+              onSubmit={(e) => {
+                e.preventDefault();
+                crearYAsignarTag(gestionando.id);
+              }}
+            >
+              <input
+                type="text"
+                placeholder="Nueva etiqueta..."
+                value={nuevoTagTexto}
+                onChange={(e) => setNuevoTagTexto(e.target.value)}
+                disabled={creandoTag}
+                style={{ flex: 1 }}
+              />
+              <button type="submit" className="btn-secondary" disabled={creandoTag || !nuevoTagTexto.trim()}>
+                + Crear
+              </button>
+            </form>
+            <span className="section-sub" style={{ margin: "6px 0 0", display: "block" }}>
+              Para eliminar una etiqueta, andá a Configuración.
+            </span>
           </div>
           <div className="field" style={{ marginTop: 16 }}>
             <label htmlFor="excluida-quick" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>

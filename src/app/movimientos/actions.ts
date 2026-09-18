@@ -11,6 +11,8 @@ import {
   tagsPorTransaccion,
   alternarTagDeTransaccion,
   alternarExcluida,
+  crearTag,
+  type Tag,
 } from "@/db/queries";
 
 // Tags y "sin contabilizar" ya NO se editan acá — viven en el picker rápido
@@ -103,4 +105,18 @@ export async function alternarExcluidaAction(transaccionId: number, excluida: bo
   revalidatePath("/movimientos");
   revalidatePath("/presupuesto");
   revalidatePath("/");
+}
+
+// Crea la etiqueta (o reusa una existente con el mismo nombre, ver crearTag)
+// y la prende de una en el movimiento — el picker rápido de Movimientos no
+// necesita pasar por Configuración solo para dar de alta una etiqueta nueva.
+// Eliminar una etiqueta sigue viviendo exclusivamente en Configuración.
+export async function crearYAsignarTagAction(transaccionId: number, nombre: string): Promise<Tag> {
+  const tag = await crearTag(nombre);
+  await alternarTagDeTransaccion(transaccionId, tag.id, true);
+  revalidatePath("/movimientos");
+  revalidatePath("/presupuesto");
+  revalidatePath("/configuracion");
+  revalidatePath("/");
+  return tag;
 }
