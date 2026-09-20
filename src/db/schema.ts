@@ -287,3 +287,18 @@ export const deudasManuales = sqliteTable("deudas_manuales", {
   fechaPago: text("fecha_pago"),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
+
+// --- Briefs (dominio Brief, Fase B) -----------------------------------------
+// Portado tal cual del repo Daily Brief (ver docs/plan-reestructuracion-
+// multidominio.md §2.4) — un JSON completo por fila, sin normalizar, porque
+// nada más que la propia UI de Brief consume estas columnas todavía.
+export const briefs = sqliteTable("briefs", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  date: text("date").notNull().unique(), // "YYYY-MM-DD" hora de Lima
+  rawJson: text("raw_json").notNull(), // JSON completo devuelto por Claude
+  createdAt: integer("created_at", { mode: "timestamp" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+export type Brief = typeof briefs.$inferSelect;
+export type NewBrief = typeof briefs.$inferInsert;
