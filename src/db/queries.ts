@@ -228,10 +228,15 @@ export async function resumenMes(mes: string) {
       continue;
     }
     if (t.excluida) continue;
-    if (t.categoriaId !== null && excluidas.has(t.categoriaId)) continue;
     if (t.tipo === "ingreso") {
       ingresos += t.monto;
-    } else if (t.tipo === "devolucion") {
+      continue;
+    }
+    // excluirDeGastoReal es "no cuenta como gasto real" (transferencias entre
+    // billeteras propias, pruebas, etc.) — no debe aplicarse a ingresos, solo
+    // llegamos acá para los tipos que sí son gasto/devolución.
+    if (t.categoriaId !== null && excluidas.has(t.categoriaId)) continue;
+    if (t.tipo === "devolucion") {
       // No es un ingreso real ni un gasto nuevo — reduce el gasto que ya se
       // había contado (o lo deja en 0 si la compra original no está en el
       // sistema), nunca debe sumarse como si fuera un consumo más.
