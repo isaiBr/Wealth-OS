@@ -75,7 +75,11 @@ function estadoBarra(pct: number | null): "" | "warn" | "over" {
 }
 
 function formatHora(fechaIso: string): string {
-  return new Date(fechaIso).toLocaleTimeString("es-PE", { hour: "numeric", minute: "2-digit", hour12: true });
+  const fecha = new Date(fechaIso);
+  const minutos = fecha.getMinutes().toString().padStart(2, "0");
+  const sufijo = fecha.getHours() < 12 ? "a. m." : "p. m.";
+  const horas12 = fecha.getHours() % 12 || 12;
+  return `${horas12}:${minutos} ${sufijo}`;
 }
 
 export default async function InicioPage() {
