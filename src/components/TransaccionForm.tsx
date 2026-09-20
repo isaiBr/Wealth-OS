@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "./Modal";
-import { crearTransaccionAction, actualizarTransaccionAction } from "@/app/movimientos/actions";
+import { crearTransaccionAction, actualizarTransaccionAction } from "@/app/(finanzas)/movimientos/actions";
 import type { Cuenta, Categoria, Transaccion } from "@/db/queries";
 
 interface Props {

@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Fraunces, Public_Sans } from "next/font/google";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import "./globals.css";
-import { BottomNav, TopNav } from "@/components/Nav";
 
 const fraunces = Fraunces({
   variable: "--font-serif",
@@ -33,9 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               </div>
               <UserButton />
             </div>
-            <TopNav />
             {children}
-            <BottomNav />
           </div>
         </body>
       </html>
