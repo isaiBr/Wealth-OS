@@ -27,7 +27,7 @@ function pad(n: number): string {
  * "12 de setiembre de 2026 - 03:32 PM" (constancias)
  * "Jueves, 03 Septiembre 2026 - 12:46 P. M." (pago de servicios, sin "de")
  */
-function parseFecha(texto: string): string | null {
+export function parseFecha(texto: string): string | null {
   const m = texto.match(
     /(\d{1,2})\s+(?:de\s+)?([A-Za-zñÑ]+)\s+(?:de\s+)?(\d{4})\s*-\s*(\d{1,2}):(\d{2})\s*([AaPp])[.\s]*[Mm]\.?/
   );
@@ -51,7 +51,7 @@ function valorLinea(texto: string, label: string): string | undefined {
   return m?.[1]?.trim();
 }
 
-function parseMonto(valor: string | undefined): { monto: number; moneda: string } | null {
+export function parseMonto(valor: string | undefined): { monto: number; moneda: string } | null {
   if (!valor) return null;
   const m = valor.match(/(\$|S\/\.?)\s*([\d,]+\.?\d*)/);
   if (!m) return null;
@@ -227,6 +227,32 @@ function parsePagoServicio(email: RawEmail): ParsedTransaction | null {
   };
 }
 
+/**
+ * Yape no expone dígitos de cuenta (solo el celular del beneficiario) — la
+ * resolución de cuentaId se hace por `billeteraOrigen` en vez de dígitos
+ * (ver src/gmail/procesar.ts). Sin número de operación en este tipo de
+ * correo — el dedupe real es por gmailMessageId (único por mensaje).
+ */
+function parseRecepcionYapeo(email: RawEmail): ParsedTransaction | null {
+  const { body } = email;
+  const montoInfo = parseMonto(valorLinea(body, "Monto recibido"));
+  const fecha = parseFecha(valorLinea(body, "Fecha y hora") ?? "");
+  const enviadoPor = valorLinea(body, "Enviado por");
+
+  if (!montoInfo || !fecha) return null;
+
+  return {
+    banco: "bcp",
+    tipo: "ingreso",
+    monto: montoInfo.monto,
+    moneda: montoInfo.moneda,
+    comercio: enviadoPor,
+    descripcion: enviadoPor ? `Yapeo recibido de ${enviadoPor}` : "Yapeo recibido",
+    fecha,
+    billeteraOrigen: "yape",
+  };
+}
+
 export const bcpParser: BankParser = {
   banco: "bcp",
 
@@ -241,6 +267,9 @@ export const bcpParser: BankParser = {
     if (/devolución de una operación/i.test(subject)) return parseDevolucion(email);
     if (/Transferencia Entre mis Cuentas/i.test(subject)) return parseTransferenciaEntreCuentas(email);
     if (/Transferencia a Otros Bancos/i.test(subject)) return parseTransferenciaOtrosBancos(email);
+    // OJO: "recepción de Yapeo a celular" también matchea /Yapeo a Celular/i
+    // de abajo — este check va primero porque es el más específico.
+    if (/recepci[oó]n de Yapeo a celular/i.test(subject)) return parseRecepcionYapeo(email);
     if (/Yapeo a Celular/i.test(subject) || /Pago con QR/i.test(subject)) return parseYapeoQR(email);
     if (/PAGO DE SERVICIO/i.test(subject)) return parsePagoServicio(email);
 

@@ -3,13 +3,19 @@ import { db } from "@/db/client";
 import { categorias, cuentas, transacciones } from "@/db/schema";
 import { bcpParser } from "@/parsers/bcp";
 import { interbankParser } from "@/parsers/interbank";
+import { yapeParser } from "@/parsers/yape";
 import type { RawEmail } from "@/parsers/types";
 import { pareceNombrePropio } from "@/logic/transferencia-interna";
 import { categorizarPorTipo, categorizarPorComercio } from "@/categorizacion/reglas";
 import { categorizarConIA } from "@/categorizacion/ia";
 import { buscarReglaPorComercio, obtenerConfiguracionIA } from "@/db/queries";
 import { TIPO_CAMBIO_USD_PEN } from "@/config/moneda";
-import { extraerDigitosDestino, extraerDigitosOrigen, resolverCuentaIdPorDigitos } from "@/gmail/resolver-cuenta";
+import {
+  extraerDigitosDestino,
+  extraerDigitosOrigen,
+  resolverCuentaIdPorBilletera,
+  resolverCuentaIdPorDigitos,
+} from "@/gmail/resolver-cuenta";
 
 export type ResultadoIngesta =
   | { estado: "insertada"; transaccionId: number }
@@ -35,6 +41,7 @@ export async function procesarCorreo(email: RawEmail, gmailMessageId?: string): 
   let parsed = null;
   if (bcpParser.puedeParsear(email)) parsed = bcpParser.parsear(email);
   else if (interbankParser.puedeParsear(email)) parsed = interbankParser.parsear(email);
+  else if (yapeParser.puedeParsear(email)) parsed = yapeParser.parsear(email);
   if (!parsed) return { estado: "omitida", razon: "remitente/formato no reconocido" };
 
   let monto = parsed.monto;
@@ -48,7 +55,9 @@ export async function procesarCorreo(email: RawEmail, gmailMessageId?: string): 
   }
 
   let cuentaId: number | null;
-  if (parsed.banco === "interbank") {
+  if (parsed.billeteraOrigen) {
+    cuentaId = await resolverCuentaIdPorBilletera(parsed.billeteraOrigen);
+  } else if (parsed.banco === "interbank") {
     // Fase 0-1 solo trackea una cuenta Interbank — si en el futuro hay más
     // de una, esto necesita su propia entrada en identificadores_cuenta.
     const fila = await db.select().from(cuentas).where(eq(cuentas.banco, "interbank")).get();

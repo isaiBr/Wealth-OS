@@ -39,6 +39,12 @@ export interface ParsedTransaction {
    * no del parser.
    */
   cuentaOrigenLabel?: string;
+  /**
+   * Cuando el correo no trae dígitos de cuenta para resolverla (ej. Yape no
+   * expone número de cuenta, solo el celular) — se resuelve por la cuenta
+   * marcada con esta billetera en `cuentas.billetera` en vez de por dígitos.
+   */
+  billeteraOrigen?: "yape" | "plin";
 }
 
 export interface BankParser {
