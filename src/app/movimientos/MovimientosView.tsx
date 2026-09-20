@@ -172,15 +172,21 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
             {grupos.get(dia)!.map((t) => {
               const cuenta = cuentaPorId.get(t.cuentaId);
               const categoria = t.categoriaId ? categoriaPorId.get(t.categoriaId) : undefined;
-              const esIngreso = t.tipo === "ingreso" || t.tipo === "devolucion";
+              const esIngreso = t.tipo === "ingreso" || t.tipo === "devolucion" || (t.tipo === "ajuste" && t.monto >= 0);
               const tagsDeEsta = tagsPorTx.get(t.id) ?? [];
               return (
                 <div className={`tx${t.esTransferenciaInterna ? " transfer" : ""}`} key={t.id}>
                   <div className="tx-left">
                     <div className="tx-info">
-                      <button className="tx-merchant" type="button" onClick={() => abrirEdicion(t)}>
-                        {t.comercio || "(sin descripción)"}
-                      </button>
+                      {t.tipo === "ajuste" ? (
+                        <span className="tx-merchant" style={{ cursor: "default" }}>
+                          {t.comercio || "(sin descripción)"}
+                        </span>
+                      ) : (
+                        <button className="tx-merchant" type="button" onClick={() => abrirEdicion(t)}>
+                          {t.comercio || "(sin descripción)"}
+                        </button>
+                      )}
                       <div className="tx-meta">
                         {cuenta && (
                           <span className={`banco-tag tag-${cuenta.banco}`}>{cuenta.banco.slice(0, 3).toUpperCase()}</span>
@@ -188,6 +194,8 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
                         <span className="tx-hours">{formatHora(t.fecha)}</span>
                         {t.esTransferenciaInterna ? (
                           <span className="tx-cat-pill transfer">Transferencia interna</span>
+                        ) : t.tipo === "ajuste" ? (
+                          <span className="tx-cat-pill">Ajuste de saldo</span>
                         ) : (
                           <span className={`tx-cat-pill${categoria && !t.categoriaConfirmada ? " suggested" : ""}`}>
                             {categoria?.nombre ?? "Sin categoría"}
@@ -211,7 +219,7 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
                     </div>
                   </div>
                   <div className={`tx-amount tabular${esIngreso ? " income" : ""}`}>
-                    {esIngreso ? "+ " : "− "}S/ {FORMATO_MONTO.format(t.monto)}
+                    {esIngreso ? "+ " : "− "}S/ {FORMATO_MONTO.format(Math.abs(t.monto))}
                   </div>
                 </div>
               );

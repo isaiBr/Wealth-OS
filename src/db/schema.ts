@@ -97,7 +97,11 @@ export const transacciones = sqliteTable(
     cuentaId: integer("cuenta_id").references(() => cuentas.id).notNull(),
     tipo: text("tipo").notNull(),
     // 'compra' | 'transferencia' | 'retiro' | 'pago_servicio'
-    // | 'pago_tarjeta_credito' | 'ingreso'
+    // | 'pago_tarjeta_credito' | 'ingreso' | 'ajuste'
+    // 'ajuste' corrige saldoCuenta() cuando se descuadra (ver
+    // ajustarSaldoCuenta en queries.ts) — monto guarda el DELTA con signo
+    // (no un monto siempre positivo como el resto de tipos), y siempre va
+    // con excluida=true para no contar como ingreso/gasto real.
     monto: real("monto").notNull(),
     moneda: text("moneda").notNull().default("PEN"),
     comercio: text("comercio"),

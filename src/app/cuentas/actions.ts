@@ -6,6 +6,7 @@ import {
   alternarDestacada,
   actualizarBilletera,
   renombrarCuenta,
+  ajustarSaldoCuenta,
   configurarFondoEmergencia,
   crearCobranza,
   editarCobranza,
@@ -54,6 +55,21 @@ export async function editarCuentaAction(formData: FormData) {
 
   await renombrarCuenta(cuentaId, nombre);
   await actualizarBilletera(cuentaId, billetera);
+  revalidatePath("/cuentas");
+  revalidatePath("/movimientos");
+  revalidatePath("/");
+}
+
+export async function ajustarSaldoCuentaAction(formData: FormData) {
+  const cuentaId = parseInt(String(formData.get("cuentaId") ?? ""), 10);
+  const saldoReal = parseFloat(String(formData.get("saldoReal") ?? ""));
+  const nota = String(formData.get("nota") ?? "").trim();
+
+  if (Number.isNaN(cuentaId) || Number.isNaN(saldoReal) || !nota) {
+    throw new Error("Datos de corrección de saldo incompletos");
+  }
+
+  await ajustarSaldoCuenta(cuentaId, redondear(saldoReal), nota);
   revalidatePath("/cuentas");
   revalidatePath("/movimientos");
   revalidatePath("/");

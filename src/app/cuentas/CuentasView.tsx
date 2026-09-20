@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
-import { crearCuentaAction, alternarDestacadaAction, editarCuentaAction } from "./actions";
+import { crearCuentaAction, alternarDestacadaAction, editarCuentaAction, ajustarSaldoCuentaAction } from "./actions";
 
 interface CuentaConSaldo {
   id: number;
@@ -18,6 +18,7 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [editandoCuenta, setEditandoCuenta] = useState<CuentaConSaldo | null>(null);
+  const [corrigiendoSaldo, setCorrigiendoSaldo] = useState(false);
 
   async function handleSubmit(formData: FormData) {
     setGuardando(true);
@@ -37,6 +38,22 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
     } finally {
       setGuardando(false);
     }
+  }
+
+  async function handleAjustarSaldo(formData: FormData) {
+    setGuardando(true);
+    try {
+      await ajustarSaldoCuentaAction(formData);
+      setEditandoCuenta(null);
+      setCorrigiendoSaldo(false);
+    } finally {
+      setGuardando(false);
+    }
+  }
+
+  function cerrarModalEdicion() {
+    setEditandoCuenta(null);
+    setCorrigiendoSaldo(false);
   }
 
   return (
@@ -82,7 +99,10 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
                 className="edit-btn"
                 aria-label={`Editar cuenta ${c.nombre}`}
                 title="Editar nombre y billetera"
-                onClick={() => setEditandoCuenta(c)}
+                onClick={() => {
+                  setCorrigiendoSaldo(false);
+                  setEditandoCuenta(c);
+                }}
               >
                 ✎
               </button>
@@ -137,8 +157,8 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
         </Modal>
       )}
 
-      {editandoCuenta && (
-        <Modal onClose={() => setEditandoCuenta(null)}>
+      {editandoCuenta && !corrigiendoSaldo && (
+        <Modal onClose={cerrarModalEdicion}>
           <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
             Editar cuenta
           </h2>
@@ -156,12 +176,58 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
                 <option value="plin">Plin</option>
               </select>
             </div>
+            <button
+              type="button"
+              className="text-link"
+              style={{ marginBottom: 16 }}
+              onClick={() => setCorrigiendoSaldo(true)}
+            >
+              Corregir saldo actual →
+            </button>
             <div className="modal-actions">
-              <button type="button" className="btn-secondary" onClick={() => setEditandoCuenta(null)} disabled={guardando}>
+              <button type="button" className="btn-secondary" onClick={cerrarModalEdicion} disabled={guardando}>
                 Cancelar
               </button>
               <button type="submit" className="btn-primary" disabled={guardando}>
                 {guardando ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {editandoCuenta && corrigiendoSaldo && (
+        <Modal onClose={cerrarModalEdicion}>
+          <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
+            Corregir saldo de {editandoCuenta.nombre}
+          </h2>
+          <form action={handleAjustarSaldo}>
+            <input type="hidden" name="cuentaId" value={editandoCuenta.id} />
+            <p className="empty-note" style={{ padding: "0 0 10px", textAlign: "left" }}>
+              Saldo actual calculado: S/ {editandoCuenta.saldo.toFixed(2)}. Se registra un movimiento de ajuste
+              por la diferencia — queda visible en Movimientos, no se pierde el rastro.
+            </p>
+            <div className="field">
+              <label htmlFor="saldoReal">Saldo real (S/)</label>
+              <input
+                id="saldoReal"
+                name="saldoReal"
+                type="number"
+                step="0.01"
+                defaultValue={editandoCuenta.saldo.toFixed(2)}
+                required
+              />
+            </div>
+            <div className="field">
+              <label htmlFor="nota">Nota (obligatoria)</label>
+              <input id="nota" name="nota" type="text" placeholder="Por qué se corrige" required />
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setCorrigiendoSaldo(false)} disabled={guardando}>
+                ← Volver
+              </button>
+              <button type="submit" className="btn-primary" disabled={guardando}>
+                {guardando ? "Guardando..." : "Corregir saldo"}
               </button>
             </div>
           </form>

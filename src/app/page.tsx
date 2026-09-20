@@ -451,7 +451,7 @@ export default async function InicioPage() {
           recientes.map((t) => {
             const cuenta = cuentaPorId.get(t.cuentaId);
             const categoria = t.categoriaId ? categoriaPorId.get(t.categoriaId) : undefined;
-            const esIngreso = t.tipo === "ingreso" || t.tipo === "devolucion";
+            const esIngreso = t.tipo === "ingreso" || t.tipo === "devolucion" || (t.tipo === "ajuste" && t.monto >= 0);
             return (
               <div className={`tx${t.esTransferenciaInterna ? " transfer" : ""}`} key={t.id}>
                 <div className="tx-left">
@@ -473,7 +473,7 @@ export default async function InicioPage() {
                   </div>
                 </div>
                 <div className={`tx-amount tabular${esIngreso ? " income" : ""}`}>
-                  {esIngreso ? "+ " : "− "}S/ {t.monto.toFixed(2)}
+                  {esIngreso ? "+ " : "− "}S/ {Math.abs(t.monto).toFixed(2)}
                 </div>
               </div>
             );

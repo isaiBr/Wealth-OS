@@ -151,7 +151,7 @@ export async function alternarExcluida(transaccionId: number, excluida: boolean)
 }
 
 function signo(tipo: string): 1 | -1 {
-  return tipo === "ingreso" || tipo === "devolucion" ? 1 : -1;
+  return tipo === "ingreso" || tipo === "devolucion" || tipo === "ajuste" ? 1 : -1;
 }
 
 /**
@@ -168,7 +168,7 @@ export async function saldoCuenta(cuentaId: number): Promise<number> {
 
   const propias = await db
     .select({
-      total: sql<number>`coalesce(sum(case when ${transacciones.tipo} in ('ingreso', 'devolucion') then ${transacciones.monto} else -${transacciones.monto} end), 0)`,
+      total: sql<number>`coalesce(sum(case when ${transacciones.tipo} in ('ingreso', 'devolucion', 'ajuste') then ${transacciones.monto} else -${transacciones.monto} end), 0)`,
     })
     .from(transacciones)
     .where(eq(transacciones.cuentaId, cuentaId))
@@ -484,6 +484,34 @@ export async function actualizarBilletera(cuentaId: number, billetera: "yape" | 
 
 export async function renombrarCuenta(cuentaId: number, nombre: string) {
   await db.update(cuentas).set({ nombre }).where(eq(cuentas.id, cuentaId));
+}
+
+/**
+ * Corrige el saldo de una cuenta insertando una transacción de tipo 'ajuste'
+ * por el delta contra saldoCuenta(), en vez de tocar saldoInicial en
+ * silencio (a diferencia de corregirDeudaTarjeta) — así queda evidencia
+ * visible en Movimientos, con la nota de por qué se corrigió. excluida=true
+ * para que no cuente como ingreso/gasto real (resumenMes,
+ * presupuestoPorCategoria, etc.), pero sí sigue contando para saldoCuenta()
+ * como cualquier otra transacción.
+ */
+export async function ajustarSaldoCuenta(cuentaId: number, saldoReal: number, nota: string): Promise<void> {
+  const saldoActual = await saldoCuenta(cuentaId);
+  const delta = Math.round((saldoReal - saldoActual) * 100) / 100;
+  if (delta === 0) return;
+  await db.insert(transacciones).values({
+    cuentaId,
+    tipo: "ajuste",
+    monto: delta,
+    moneda: "PEN",
+    comercio: nota,
+    descripcion: nota,
+    fecha: new Date().toISOString(),
+    categoriaId: null,
+    categoriaConfirmada: false,
+    excluida: true,
+    fuente: "manual",
+  });
 }
 
 /**
