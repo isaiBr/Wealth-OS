@@ -9,7 +9,10 @@
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "dev:test": "node scripts/with-test-env.js npx next dev -p 3001",
+    "db:push:test": "node scripts/with-test-env.js npx drizzle-kit push",
+    "db:studio:test": "node scripts/with-test-env.js npx drizzle-kit studio --port 4984"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.126.0",

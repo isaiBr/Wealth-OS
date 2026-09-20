@@ -15,7 +15,11 @@
 
 # next.js
 /.next/
+/.next-test/
 /out/
+
+# BD local de pruebas (npm run dev:test) — nunca es la BD real
+/local-test.db*
 
 # production
 /build
