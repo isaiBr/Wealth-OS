@@ -10,6 +10,7 @@ import { CuentasView } from "./CuentasView";
 import { FondoEmergenciaView } from "./FondoEmergenciaView";
 import { CobranzasView } from "./CobranzasView";
 import { DeudasView } from "./DeudasView";
+import { TabPillsGroup, TabPanel } from "@/components/TabPills";
 
 export const dynamic = "force-dynamic";
 
@@ -37,18 +38,36 @@ export default async function CuentasPage() {
         <div className="screen-title">Cuentas</div>
         <div className="screen-sub">Saldo reconstruido: saldo inicial + movimientos detectados — no es un pull en vivo del banco.</div>
       </div>
-      <div className="dashboard-grid">
-        <div className="col-main">
-          <CuentasView cuentas={cuentasConSaldo} />
-        </div>
-        <div className="col-side">
-          <FondoEmergenciaView fondo={fondo} cuentas={cuentas.map((c) => ({ id: c.id, nombre: c.nombre }))} />
+      <TabPillsGroup
+        ariaLabel="Secciones de Cuentas"
+        tabs={[
+          { key: "cuentas", label: "Cuentas" },
+          { key: "cobranzas", label: "Cobranzas" },
+          { key: "deudas", label: "Deudas" },
+          { key: "fondo", label: "Fondo" },
+        ]}
+      >
+        <div className="dashboard-grid">
+          <div className="col-main">
+            <TabPanel tabKey="cuentas">
+              <CuentasView cuentas={cuentasConSaldo} />
+            </TabPanel>
+          </div>
+          <div className="col-side">
+            <TabPanel tabKey="fondo">
+              <FondoEmergenciaView fondo={fondo} cuentas={cuentas.map((c) => ({ id: c.id, nombre: c.nombre }))} />
+            </TabPanel>
 
-          <DeudasView deudasTarjeta={deudas} deudasManuales={deudasManuales} />
+            <TabPanel tabKey="deudas">
+              <DeudasView deudasTarjeta={deudas} deudasManuales={deudasManuales} />
+            </TabPanel>
 
-          <CobranzasView cobranzas={cobranzas} />
+            <TabPanel tabKey="cobranzas">
+              <CobranzasView cobranzas={cobranzas} />
+            </TabPanel>
+          </div>
         </div>
-      </div>
+      </TabPillsGroup>
     </div>
   );
 }

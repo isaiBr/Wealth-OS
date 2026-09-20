@@ -274,6 +274,51 @@ button {
   padding: 0;
 }
 
+/* ---------- submenu de pills dentro de una pantalla (mobile) ---------- */
+.tab-pills {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  margin: 0 0 18px;
+  padding-bottom: 1px;
+}
+.tab-pills button {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.tab-pills button:hover {
+  background: var(--surface-sunken);
+}
+.tab-pills button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.tab-panel {
+  display: none;
+}
+.tab-panel.active-panel {
+  display: block;
+}
+@media (min-width: 900px) {
+  /* en desktop las dos columnas ya muestran todo — las pills solo aplican a mobile */
+  .tab-pills {
+    display: none;
+  }
+  .tab-panel {
+    display: block;
+  }
+}
+
 /* ---------- hero (Inicio) ---------- */
 .hero-row {
   display: flex;

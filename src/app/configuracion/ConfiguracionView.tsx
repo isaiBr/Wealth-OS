@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
+import { TabPanel } from "@/components/TabPills";
 import {
   crearCategoriaAction,
   editarCategoriaAction,
@@ -91,6 +92,7 @@ export function ConfiguracionView({ categorias, tags }: Props) {
 
   return (
     <>
+      <TabPanel tabKey="categorias">
       <div className="section-head">
         <div>
           <div className="section-title">Categorías</div>
@@ -141,7 +143,9 @@ export function ConfiguracionView({ categorias, tags }: Props) {
           </div>
         ))}
       </div>
+      </TabPanel>
 
+      <TabPanel tabKey="etiquetas">
       <div className="section-head">
         <div>
           <div className="section-title">Etiquetas</div>
@@ -187,6 +191,7 @@ export function ConfiguracionView({ categorias, tags }: Props) {
           />
         </div>
       </div>
+      </TabPanel>
 
       {modalAbierto && (
         <Modal onClose={() => setModalAbierto(false)}>

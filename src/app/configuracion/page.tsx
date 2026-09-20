@@ -1,6 +1,7 @@
 import { listarCategorias, listarReglasCategorizacion, listarTags, obtenerConfiguracionIA } from "@/db/queries";
 import { ConfiguracionView } from "./ConfiguracionView";
 import { ReglasCategorizacionView } from "./ReglasCategorizacionView";
+import { TabPillsGroup, TabPanel } from "@/components/TabPills";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +19,25 @@ export default async function ConfiguracionPage() {
           Categorías, etiquetas y reglas de categorización — personaliza cómo Wealth OS organiza tus movimientos.
         </div>
       </div>
-      <div className="dashboard-grid">
-        <div className="col-main">
-          <ConfiguracionView categorias={categorias} tags={tags} />
+      <TabPillsGroup
+        ariaLabel="Secciones de Configuración"
+        tabs={[
+          { key: "categorias", label: "Categorías" },
+          { key: "etiquetas", label: "Etiquetas" },
+          { key: "reglas", label: "Reglas" },
+        ]}
+      >
+        <div className="dashboard-grid">
+          <div className="col-main">
+            <ConfiguracionView categorias={categorias} tags={tags} />
+          </div>
+          <div className="col-side">
+            <TabPanel tabKey="reglas">
+              <ReglasCategorizacionView categorias={categorias} reglas={reglas} configuracion={configuracion} />
+            </TabPanel>
+          </div>
         </div>
-        <div className="col-side">
-          <ReglasCategorizacionView categorias={categorias} reglas={reglas} configuracion={configuracion} />
-        </div>
-      </div>
+      </TabPillsGroup>
     </div>
   );
 }
