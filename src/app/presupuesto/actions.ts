@@ -38,9 +38,11 @@ export async function obtenerDesgloseEtiquetasAction(categoriaId: number, mes: s
   return desglosePorEtiqueta(categoriaId, mes);
 }
 
-export async function editarCuotasPagadasAction(compraCuotaId: number, nuevoTotal: number) {
+export async function editarCuotasPagadasAction(compraCuotaId: number, nuevoTotal: number, nuevoComercio?: string) {
   if (Number.isNaN(nuevoTotal) || nuevoTotal < 0) throw new Error("Cantidad de cuotas inválida");
-  await editarCuotasPagadas(compraCuotaId, nuevoTotal);
+  const comercio = nuevoComercio?.trim();
+  if (comercio !== undefined && !comercio) throw new Error("El nombre de la cuota no puede quedar vacío");
+  await editarCuotasPagadas(compraCuotaId, nuevoTotal, comercio);
   revalidatePath("/presupuesto");
   revalidatePath("/");
 }

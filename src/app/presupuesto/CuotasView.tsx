@@ -43,7 +43,8 @@ export function CuotasView({ cuotas, totalMensual }: { cuotas: CuotaActiva[]; to
     setGuardando(true);
     try {
       const nuevoTotal = Number(formData.get("cuotasPagadas"));
-      await editarCuotasPagadasAction(editando.id, nuevoTotal);
+      const nuevoComercio = String(formData.get("comercio") ?? "");
+      await editarCuotasPagadasAction(editando.id, nuevoTotal, nuevoComercio);
       setEditando(null);
     } finally {
       setGuardando(false);
@@ -121,6 +122,10 @@ export function CuotasView({ cuotas, totalMensual }: { cuotas: CuotaActiva[]; to
             Corregir cuotas pagadas — {editando.comercio}
           </h2>
           <form action={handleSubmit}>
+            <div className="field">
+              <label htmlFor="comercio">Nombre de la cuota</label>
+              <input id="comercio" name="comercio" type="text" defaultValue={editando.comercio} required />
+            </div>
             <div className="field">
               <label htmlFor="cuotasPagadas">
                 Cuotas pagadas de {editando.totalCuotas} totales

@@ -630,10 +630,13 @@ export async function alternarPagoCuotaMes(compraCuotaId: number, mes: string, p
  * para que base + pagos registrados por mes dé el total que se le pasa —
  * los pagos por mes ya registrados no se tocan.
  */
-export async function editarCuotasPagadas(compraCuotaId: number, nuevoTotal: number): Promise<void> {
+export async function editarCuotasPagadas(compraCuotaId: number, nuevoTotal: number, nuevoComercio?: string): Promise<void> {
   const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compraCuotaId));
   const nuevaBase = Math.max(0, nuevoTotal - pagos.length);
-  await db.update(comprasCuotas).set({ cuotasPagadas: nuevaBase }).where(eq(comprasCuotas.id, compraCuotaId));
+  await db
+    .update(comprasCuotas)
+    .set({ cuotasPagadas: nuevaBase, ...(nuevoComercio ? { comercio: nuevoComercio } : {}) })
+    .where(eq(comprasCuotas.id, compraCuotaId));
 }
 
 export interface MetaCompraConProgreso {
