@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { Fraunces, Public_Sans } from "next/font/google";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import "./globals.css";
+import { DomainSwitcherProvider } from "@/components/DomainSwitcherContext";
+import { DomainSwitcherButton } from "@/components/DomainSwitcherButton";
+import { DomainSwitcherSheet } from "@/components/DomainSwitcherSheet";
 
 const fraunces = Fraunces({
   variable: "--font-serif",
@@ -25,15 +28,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="es" className={`${fraunces.variable} ${publicSans.variable}`}>
         <body>
-          <div className="page">
-            <div className="topbar">
-              <div className="brand">
-                <span className="brand-mark serif">Wealth OS</span>
+          <DomainSwitcherProvider>
+            <div className="page">
+              <div className="topbar">
+                <div className="brand">
+                  <DomainSwitcherButton />
+                </div>
+                <UserButton />
               </div>
-              <UserButton />
+              {children}
             </div>
-            {children}
-          </div>
+            <DomainSwitcherSheet />
+          </DomainSwitcherProvider>
         </body>
       </html>
     </ClerkProvider>
