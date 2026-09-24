@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { eliminarReglaAction, actualizarConfiguracionIAAction } from "./actions";
 import type { Categoria, ReglaCategorizacion, ConfiguracionIa } from "@/db/queries";
 
@@ -14,6 +15,7 @@ export function ReglasCategorizacionView({ categorias, reglas, configuracion }: 
   const [procesandoId, setProcesandoId] = useState<number | null>(null);
   const [config, setConfig] = useState(configuracion);
   const [guardandoConfig, setGuardandoConfig] = useState<keyof ConfiguracionIa | null>(null);
+  const [confirmandoRegla, setConfirmandoRegla] = useState<ReglaCategorizacion | null>(null);
 
   const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
 
@@ -21,6 +23,7 @@ export function ReglasCategorizacionView({ categorias, reglas, configuracion }: 
     setProcesandoId(regla.id);
     try {
       await eliminarReglaAction(regla.id);
+      setConfirmandoRegla(null);
     } finally {
       setProcesandoId(null);
     }
@@ -117,7 +120,7 @@ export function ReglasCategorizacionView({ categorias, reglas, configuracion }: 
                 aria-label={`Eliminar regla ${r.patron}`}
                 title="Eliminar regla"
                 disabled={procesandoId === r.id}
-                onClick={() => handleEliminarRegla(r)}
+                onClick={() => setConfirmandoRegla(r)}
               >
                 ✕
               </button>
@@ -128,6 +131,16 @@ export function ReglasCategorizacionView({ categorias, reglas, configuracion }: 
       <p className="section-sub" style={{ marginTop: 8 }}>
         Cada vez que confirmas o corriges una categoría sugerida en Movimientos, esta lista se actualiza sola.
       </p>
+
+      {confirmandoRegla && (
+        <ConfirmModal
+          titulo={`¿Eliminar la regla "${confirmandoRegla.patron}"?`}
+          mensaje="La próxima vez que aparezca ese comercio, va a volver a preguntar (o a usar IA) en vez de categorizar solo."
+          confirmando={procesandoId === confirmandoRegla.id}
+          onConfirmar={() => handleEliminarRegla(confirmandoRegla)}
+          onCancelar={() => setConfirmandoRegla(null)}
+        />
+      )}
     </>
   );
 }

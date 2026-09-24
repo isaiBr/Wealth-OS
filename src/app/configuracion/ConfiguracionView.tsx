@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { TabPanel } from "@/components/TabPills";
 import {
   crearCategoriaAction,
@@ -26,6 +27,7 @@ export function ConfiguracionView({ categorias, tags }: Props) {
   const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
   const [guardandoTag, setGuardandoTag] = useState(false);
   const [procesandoTagId, setProcesandoTagId] = useState<number | null>(null);
+  const [confirmandoTag, setConfirmandoTag] = useState<Tag | null>(null);
 
   function abrirCreacion() {
     setEditando(undefined);
@@ -79,6 +81,7 @@ export function ConfiguracionView({ categorias, tags }: Props) {
     setProcesandoTagId(tag.id);
     try {
       await eliminarTagAction(tag.id);
+      setConfirmandoTag(null);
     } finally {
       setProcesandoTagId(null);
     }
@@ -166,7 +169,7 @@ export function ConfiguracionView({ categorias, tags }: Props) {
                 type="button"
                 aria-label={`Eliminar etiqueta ${t.nombre}`}
                 disabled={procesandoTagId === t.id}
-                onClick={() => handleEliminarTag(t)}
+                onClick={() => setConfirmandoTag(t)}
               >
                 ×
               </button>
@@ -227,6 +230,16 @@ export function ConfiguracionView({ categorias, tags }: Props) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirmandoTag && (
+        <ConfirmModal
+          titulo={`¿Eliminar etiqueta "${confirmandoTag.nombre}"?`}
+          mensaje="Se quita de todos los movimientos que la tengan. No se puede deshacer."
+          confirmando={procesandoTagId === confirmandoTag.id}
+          onConfirmar={() => handleEliminarTag(confirmandoTag)}
+          onCancelar={() => setConfirmandoTag(null)}
+        />
       )}
     </>
   );

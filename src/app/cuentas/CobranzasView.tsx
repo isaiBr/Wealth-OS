@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import { crearCobranzaAction, editarCobranzaAction, marcarCobranzaCobradaAction, eliminarCobranzaAction } from "./actions";
 import type { Cobranza } from "@/db/queries";
 
@@ -12,6 +13,7 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
   const [editando, setEditando] = useState<Cobranza | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [procesandoId, setProcesandoId] = useState<number | null>(null);
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState<Cobranza | null>(null);
 
   const pendientes = cobranzas.filter((c) => c.estado === "pendiente");
   const cobradas = cobranzas.filter((c) => c.estado === "cobrado");
@@ -50,6 +52,7 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
     setProcesandoId(c.id);
     try {
       await eliminarCobranzaAction(c.id);
+      setConfirmandoEliminar(null);
     } finally {
       setProcesandoId(null);
     }
@@ -105,7 +108,7 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
                     aria-label={`Eliminar cobranza "${c.descripcion}"`}
                     title="Eliminar"
                     disabled={procesandoId === c.id}
-                    onClick={() => handleEliminar(c)}
+                    onClick={() => setConfirmandoEliminar(c)}
                   >
                     ✕
                   </button>
@@ -150,7 +153,7 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
                       aria-label={`Eliminar cobranza "${c.descripcion}"`}
                       title="Eliminar"
                       disabled={procesandoId === c.id}
-                      onClick={() => handleEliminar(c)}
+                      onClick={() => setConfirmandoEliminar(c)}
                     >
                       ✕
                     </button>
@@ -221,6 +224,16 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirmandoEliminar && (
+        <ConfirmModal
+          titulo={`¿Eliminar cobranza "${confirmandoEliminar.descripcion}"?`}
+          mensaje="No se puede deshacer."
+          confirmando={procesandoId === confirmandoEliminar.id}
+          onConfirmar={() => handleEliminar(confirmandoEliminar)}
+          onCancelar={() => setConfirmandoEliminar(null)}
+        />
       )}
     </>
   );

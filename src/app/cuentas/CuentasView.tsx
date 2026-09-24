@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   crearCuentaAction,
   alternarDestacadaAction,
@@ -42,6 +43,7 @@ export function CuentasView({
   const [guardandoDigitos, setGuardandoDigitos] = useState(false);
   const [errorDigitos, setErrorDigitos] = useState<string | null>(null);
   const [eliminandoDigitosId, setEliminandoDigitosId] = useState<number | null>(null);
+  const [confirmandoDigitos, setConfirmandoDigitos] = useState<Identificador | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setGuardando(true);
@@ -99,6 +101,7 @@ export function CuentasView({
     setEliminandoDigitosId(id);
     try {
       await eliminarIdentificadorAction(id);
+      setConfirmandoDigitos(null);
     } finally {
       setEliminandoDigitosId(null);
     }
@@ -251,7 +254,7 @@ export function CuentasView({
                     aria-label={`Quitar dígitos ${idf.ultimosDigitos}`}
                     title="Quitar"
                     disabled={eliminandoDigitosId === idf.id}
-                    onClick={() => handleEliminarDigitos(idf.id)}
+                    onClick={() => setConfirmandoDigitos(idf)}
                   >
                     ✕
                   </button>
@@ -338,6 +341,17 @@ export function CuentasView({
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirmandoDigitos && (
+        <ConfirmModal
+          titulo={`¿Quitar los dígitos •••• ${confirmandoDigitos.ultimosDigitos}?`}
+          mensaje="Los correos que traigan estos dígitos dejarán de identificar esta cuenta automáticamente."
+          textoConfirmar="Quitar"
+          confirmando={eliminandoDigitosId === confirmandoDigitos.id}
+          onConfirmar={() => handleEliminarDigitos(confirmandoDigitos.id)}
+          onCancelar={() => setConfirmandoDigitos(null)}
+        />
       )}
     </>
   );

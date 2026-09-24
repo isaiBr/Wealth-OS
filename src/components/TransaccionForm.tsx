@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "./Modal";
+import { ConfirmModal } from "./ConfirmModal";
 import { crearTransaccionAction, actualizarTransaccionAction, eliminarTransaccionAction } from "@/app/movimientos/actions";
 import type { Cuenta, Categoria, Transaccion } from "@/db/queries";
 import { BUCKETS_ORDEN, BUCKET_LABEL } from "@/logic/buckets";
@@ -17,6 +18,7 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
   const [guardando, setGuardando] = useState(false);
   const [eliminando, setEliminando] = useState(false);
   const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState(false);
   const esEdicion = !!transaccion;
 
   const categoriaActual = categorias.find((c) => c.id === transaccion?.categoriaId);
@@ -50,6 +52,7 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
       onClose();
     } catch (e) {
       setErrorEliminar(e instanceof Error ? e.message : "No se pudo eliminar");
+      setConfirmandoEliminar(false);
     } finally {
       setEliminando(false);
     }
@@ -184,9 +187,9 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
             className="text-link danger"
             style={{ marginBottom: 16 }}
             disabled={eliminando}
-            onClick={handleEliminar}
+            onClick={() => setConfirmandoEliminar(true)}
           >
-            {eliminando ? "Eliminando..." : "Eliminar movimiento"}
+            Eliminar movimiento
           </button>
         )}
         {errorEliminar && (
@@ -204,6 +207,16 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
           </button>
         </div>
       </form>
+
+      {confirmandoEliminar && (
+        <ConfirmModal
+          titulo="¿Eliminar este movimiento?"
+          mensaje="No se puede deshacer."
+          confirmando={eliminando}
+          onConfirmar={handleEliminar}
+          onCancelar={() => setConfirmandoEliminar(false)}
+        />
+      )}
     </Modal>
   );
 }

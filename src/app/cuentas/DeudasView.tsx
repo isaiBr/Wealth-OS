@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   crearDeudaManualAction,
   editarMontoDeudaManualAction,
@@ -24,6 +25,7 @@ export function DeudasView({ deudasTarjeta, deudasManuales }: Props) {
   const [editandoManual, setEditandoManual] = useState<DeudaManual | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState<DeudaManual | null>(null);
 
   const manualesPendientes = deudasManuales.filter((d) => d.estado === "pendiente");
   const manualesPagadas = deudasManuales.filter((d) => d.estado === "pagada");
@@ -78,6 +80,7 @@ export function DeudasView({ deudasTarjeta, deudasManuales }: Props) {
     setProcesandoId(`m-${d.id}`);
     try {
       await eliminarDeudaManualAction(d.id);
+      setConfirmandoEliminar(null);
     } finally {
       setProcesandoId(null);
     }
@@ -176,7 +179,7 @@ export function DeudasView({ deudasTarjeta, deudasManuales }: Props) {
                       aria-label={`Eliminar deuda "${d.descripcion}"`}
                       title="Eliminar"
                       disabled={procesandoId === `m-${d.id}`}
-                      onClick={() => handleEliminar(d)}
+                      onClick={() => setConfirmandoEliminar(d)}
                     >
                       ✕
                     </button>
@@ -222,7 +225,7 @@ export function DeudasView({ deudasTarjeta, deudasManuales }: Props) {
                       aria-label={`Eliminar deuda "${d.descripcion}"`}
                       title="Eliminar"
                       disabled={procesandoId === `m-${d.id}`}
-                      onClick={() => handleEliminar(d)}
+                      onClick={() => setConfirmandoEliminar(d)}
                     >
                       ✕
                     </button>
@@ -322,6 +325,16 @@ export function DeudasView({ deudasTarjeta, deudasManuales }: Props) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirmandoEliminar && (
+        <ConfirmModal
+          titulo={`¿Eliminar deuda "${confirmandoEliminar.descripcion}"?`}
+          mensaje="No se puede deshacer."
+          confirmando={procesandoId === `m-${confirmandoEliminar.id}`}
+          onConfirmar={() => handleEliminar(confirmandoEliminar)}
+          onCancelar={() => setConfirmandoEliminar(null)}
+        />
       )}
     </>
   );

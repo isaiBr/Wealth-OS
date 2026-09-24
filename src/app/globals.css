@@ -1654,6 +1654,21 @@ button.tx-tag-pill.toggle.active {
 .btn-primary:hover {
   background: var(--accent);
 }
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  width: 100%;
+}
+.btn-danger:hover {
+  opacity: 0.9;
+}
 .btn-secondary {
   background: none;
   color: var(--ink-muted);
@@ -1699,6 +1714,7 @@ button.tx-tag-pill.toggle.active {
   gap: 10px;
   margin-top: 6px;
 }
-.modal-actions .btn-primary {
+.modal-actions .btn-primary,
+.modal-actions .btn-danger {
   flex: 1;
 }

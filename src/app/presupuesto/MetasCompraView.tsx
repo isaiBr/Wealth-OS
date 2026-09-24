@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
+import { ConfirmModal } from "@/components/ConfirmModal";
 import {
   crearMetaCompraAction,
   editarMetaCompraAction,
@@ -45,6 +46,7 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
   const [procesandoId, setProcesandoId] = useState<number | null>(null);
   const [editandoMonto, setEditandoMonto] = useState<MetaCompraConProgreso | null>(null);
   const [guardandoMonto, setGuardandoMonto] = useState(false);
+  const [confirmandoEliminar, setConfirmandoEliminar] = useState<MetaCompraConProgreso | null>(null);
 
   function abrirCreacion() {
     setEditando(undefined);
@@ -93,6 +95,7 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
     setProcesandoId(meta.id);
     try {
       await eliminarMetaCompraAction(meta.id);
+      setConfirmandoEliminar(null);
     } finally {
       setProcesandoId(null);
     }
@@ -165,7 +168,7 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
                     aria-label={`Eliminar meta ${m.nombre}`}
                     title="Eliminar"
                     disabled={procesandoId === m.id}
-                    onClick={() => handleEliminar(m)}
+                    onClick={() => setConfirmandoEliminar(m)}
                   >
                     ✕
                   </button>
@@ -283,6 +286,16 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirmandoEliminar && (
+        <ConfirmModal
+          titulo={`¿Eliminar meta "${confirmandoEliminar.nombre}"?`}
+          mensaje="No se puede deshacer."
+          confirmando={procesandoId === confirmandoEliminar.id}
+          onConfirmar={() => handleEliminar(confirmandoEliminar)}
+          onCancelar={() => setConfirmandoEliminar(null)}
+        />
       )}
     </>
   );
