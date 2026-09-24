@@ -126,6 +126,13 @@ button {
 .screen-head {
   margin-bottom: 18px;
 }
+.screen-head-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: space-between;
+}
 .screen-title {
   font-size: 23px;
   font-weight: 520;
@@ -136,6 +143,158 @@ button {
   color: var(--ink-muted);
   margin-top: 5px;
   line-height: 1.5;
+}
+
+/* ---------- selector de mes (Movimientos, Presupuesto) ---------- */
+.mes-selector-wrap {
+  position: relative;
+  display: flex;
+}
+.mes-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-strong);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mes-trigger:hover {
+  opacity: 0.8;
+}
+.mes-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: transparent;
+}
+.mes-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 250px;
+  max-width: calc(100vw - 32px);
+  z-index: 30;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(22, 33, 27, 0.16);
+  padding: 14px;
+}
+.mes-panel-anio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+.mes-panel-anio-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 44px;
+  text-align: center;
+}
+.mes-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.mes-nav-btn:hover {
+  background: var(--surface-sunken);
+}
+.mes-nav-btn.small {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+.mes-nav-btn:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+  pointer-events: none;
+  border-color: transparent;
+}
+.mes-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.mes-mes-btn {
+  padding: 8px 0;
+  border-radius: 8px;
+  text-align: center;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.mes-mes-btn:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+.mes-mes-btn.active {
+  font-weight: 600;
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.mes-mes-btn:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* ---------- filtros de Movimientos ---------- */
+.mov-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+.mov-filtro-select {
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 40px;
+  flex: 1 1 140px;
+}
+.mov-filtro-texto {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 220px;
+}
+.mov-filtro-texto input {
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 40px;
+  flex: 1;
+  min-width: 0;
 }
 
 /* ---------- topbar ---------- */
@@ -281,6 +440,21 @@ button {
   overflow-x: auto;
   margin: 0 0 18px;
   padding-bottom: 1px;
+}
+/* Fila que combina las pills con contenido extra (ej. "Mostrar filtros")
+   pegado al borde derecho — el extra queda visible incluso en desktop,
+   cuando .tab-pills se oculta. */
+.tab-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  margin: 0 0 18px;
+}
+.tab-pills-row .tab-pills {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
 }
 .tab-pills button {
   flex-shrink: 0;

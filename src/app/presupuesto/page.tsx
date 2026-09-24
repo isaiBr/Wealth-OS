@@ -11,6 +11,8 @@ import { PresupuestoView } from "./PresupuestoView";
 import { CuotasView } from "./CuotasView";
 import { MetasCompraView } from "./MetasCompraView";
 import { TabPillsGroup, TabPanel } from "@/components/TabPills";
+import { MesSelector } from "@/components/MesSelector";
+import { normalizarMes } from "@/logic/mes";
 
 export const dynamic = "force-dynamic";
 
@@ -23,12 +25,13 @@ const BUCKETS: { clave: string; nombre: string; color: string; descripcion: stri
   { clave: "libre", nombre: "Gasto libre", color: "var(--warn)", descripcion: "Sin culpa: salidas, gustos, hobbies" },
 ];
 
-function mesActual(): string {
-  return new Date().toISOString().slice(0, 7);
+interface Props {
+  searchParams: Promise<{ mes?: string }>;
 }
 
-export default async function PresupuestoPage() {
-  const mes = mesActual();
+export default async function PresupuestoPage({ searchParams }: Props) {
+  const params = await searchParams;
+  const mes = normalizarMes(params.mes);
   const { filas, sinCategorizar } = await presupuestoPorCategoria(mes);
   const { filas: cuotas, totalMensual: totalCuotas } = await cuotasActivas();
   const hormiga = await gastoHormigaAnualizado(mes);
@@ -41,7 +44,10 @@ export default async function PresupuestoPage() {
   return (
     <div className="screen">
       <div className="screen-head">
-        <div className="screen-title">Presupuesto</div>
+        <div className="screen-head-row">
+          <div className="screen-title">Presupuesto</div>
+          <MesSelector mes={mes} basePath="/presupuesto" paramsActuales={params as Record<string, string | undefined>} />
+        </div>
         <div className="screen-sub">Ordenado por qué tan cerca está cada categoría de su límite.</div>
       </div>
 

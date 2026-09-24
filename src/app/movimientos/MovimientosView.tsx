@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { TransaccionForm } from "@/components/TransaccionForm";
 import { obtenerTransaccionesAction, alternarTagAction, alternarExcluidaAction, crearYAsignarTagAction } from "./actions";
-import type { Cuenta, Categoria, Transaccion, Tag } from "@/db/queries";
+import type { Cuenta, Categoria, Transaccion, Tag, FiltrosMovimientos } from "@/db/queries";
 
 interface Props {
   cuentas: Cuenta[];
@@ -13,6 +13,7 @@ interface Props {
   tags: Tag[];
   tagsPorTxInicial: Map<number, Tag[]>;
   mes: string;
+  filtros?: FiltrosMovimientos;
 }
 
 const FORMATO_DIA = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short" });
@@ -34,7 +35,7 @@ function etiquetaDia(fechaISO: string): string {
   return FORMATO_DIA.format(fecha);
 }
 
-export function MovimientosView({ cuentas, categorias, transacciones: inicial, tags, tagsPorTxInicial, mes }: Props) {
+export function MovimientosView({ cuentas, categorias, transacciones: inicial, tags, tagsPorTxInicial, mes, filtros }: Props) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<Transaccion | undefined>(undefined);
   const [gestionandoId, setGestionandoId] = useState<number | null>(null);
@@ -97,7 +98,7 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
   async function cargarMas() {
     setCargando(true);
     try {
-      const { transacciones: nuevas, tagsPorTx: tagsNuevos } = await obtenerTransaccionesAction(mes, offset);
+      const { transacciones: nuevas, tagsPorTx: tagsNuevos } = await obtenerTransaccionesAction(mes, offset, filtros);
       setTransacciones([...transacciones, ...nuevas]);
       setTagsPorTx(new Map([...tagsPorTx, ...tagsNuevos]));
       setOffset(offset + 50);

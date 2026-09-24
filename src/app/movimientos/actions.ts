@@ -13,7 +13,24 @@ import {
   alternarExcluida,
   crearTag,
   type Tag,
+  type FiltrosMovimientos,
 } from "@/db/queries";
+
+// Hora real al momento de registrar — antes se guardaba "T00:00:00" fijo en
+// toda transacción manual, sin representar cuándo se registró de verdad.
+// Se calcula en America/Lima (no la del servidor) porque en producción el
+// servidor puede correr en UTC.
+function horaActualPeru(): string {
+  const partes = new Intl.DateTimeFormat("es-PE", {
+    timeZone: "America/Lima",
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(new Date());
+  const obtener = (tipo: string) => partes.find((p) => p.type === tipo)?.value ?? "00";
+  return `${obtener("hour")}:${obtener("minute")}:${obtener("second")}`;
+}
 
 // Tags y "sin contabilizar" ya NO se editan acá — viven en el picker rápido
 // de la fila (ver alternarTagAction/alternarExcluidaAction abajo), así no
@@ -31,7 +48,7 @@ function leerCampos(formData: FormData) {
     throw new Error("Datos de transacción incompletos");
   }
 
-  return { cuentaId, tipo, monto, comercio, categoriaId, fecha: `${fechaInput}T00:00:00` };
+  return { cuentaId, tipo, monto, comercio, categoriaId, fecha: `${fechaInput}T${horaActualPeru()}` };
 }
 
 export async function crearTransaccionAction(formData: FormData) {
@@ -87,8 +104,8 @@ export async function actualizarTransaccionAction(formData: FormData) {
   revalidatePath("/");
 }
 
-export async function obtenerTransaccionesAction(mes: string, offset: number) {
-  const transacciones = await transaccionesDelMes(mes, 50, offset);
+export async function obtenerTransaccionesAction(mes: string, offset: number, filtros?: FiltrosMovimientos) {
+  const transacciones = await transaccionesDelMes(mes, 50, offset, filtros);
   const tagsPorTx = await tagsPorTransaccion(transacciones.map((t) => t.id));
   return { transacciones, tagsPorTx };
 }

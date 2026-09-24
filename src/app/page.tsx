@@ -16,6 +16,7 @@ import {
 } from "@/db/queries";
 import { evaluarInsights } from "@/logic/insights";
 import { deltaMonto, deltaPuntos } from "@/logic/comparaciones";
+import { mesActual, mesAnteriorDe, nombreMes } from "@/logic/mes";
 
 export const dynamic = "force-dynamic";
 
@@ -52,20 +53,6 @@ const ICONO_ALERTA = (
     <path d="M12 9v4M12 17h.01M10.3 3.9 2.7 17.1a1.8 1.8 0 0 0 1.6 2.7h15.4a1.8 1.8 0 0 0 1.6-2.7L13.7 3.9a1.8 1.8 0 0 0-3.4 0Z" />
   </svg>
 );
-
-function mesActual(): string {
-  return new Date().toISOString().slice(0, 7);
-}
-
-function mesAnteriorDe(mes: string): string {
-  const [anio, m] = mes.split("-").map(Number);
-  return m === 1 ? `${anio - 1}-12` : `${anio}-${String(m - 1).padStart(2, "0")}`;
-}
-
-function nombreMes(mes: string): string {
-  const [anio, m] = mes.split("-").map(Number);
-  return new Intl.DateTimeFormat("es-PE", { month: "long" }).format(new Date(anio, m - 1, 1));
-}
 
 function estadoBarra(pct: number | null): "" | "warn" | "over" {
   if (pct === null) return "";

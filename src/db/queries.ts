@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, like, lt, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   categorias,
@@ -196,16 +196,48 @@ function rangoMes(mes: string): { desde: string; hasta: string } {
   return { desde, hasta: `${siguiente}-01` };
 }
 
+export interface FiltrosMovimientos {
+  categoriaId?: number;
+  tagId?: number;
+  texto?: string;
+}
+
 // `limit` es opcional a propósito: la vista paginada de Movimientos lo pasa
 // explícitamente, pero el resto de funciones (resumenMes, presupuestoPorCategoria,
 // ejecutarMotorTransferencias) necesitan SIEMPRE el mes completo para que los
 // totales no queden truncados — nunca deben depender del valor por defecto.
-export async function transaccionesDelMes(mes: string, limit?: number, offset: number = 0) {
+// `filtros` solo lo usa la lista de Movimientos (para acotar qué se ve, no
+// para cambiar ningún total) — el resto de llamadas lo omite.
+export async function transaccionesDelMes(
+  mes: string,
+  limit?: number,
+  offset: number = 0,
+  filtros?: FiltrosMovimientos
+) {
   const { desde, hasta } = rangoMes(mes);
+  const condiciones = [gte(transacciones.fecha, desde), lt(transacciones.fecha, hasta)];
+
+  if (filtros?.categoriaId !== undefined) {
+    condiciones.push(eq(transacciones.categoriaId, filtros.categoriaId));
+  }
+  if (filtros?.texto) {
+    condiciones.push(like(transacciones.comercio, `%${filtros.texto}%`));
+  }
+  if (filtros?.tagId !== undefined) {
+    const filas = await db
+      .select({ transaccionId: transaccionesTags.transaccionId })
+      .from(transaccionesTags)
+      .where(eq(transaccionesTags.tagId, filtros.tagId));
+    const ids = filas.map((f) => f.transaccionId);
+    // Sin coincidencias: forzar un resultado vacío en vez de dejar el filtro
+    // sin efecto (inArray con array vacío no filtra nada en drizzle/sqlite).
+    condiciones.push(ids.length > 0 ? inArray(transacciones.id, ids) : sql`0`);
+  }
+
   const query = db
     .select()
     .from(transacciones)
-    .where(and(gte(transacciones.fecha, desde), lt(transacciones.fecha, hasta)))
+    .where(and(...condiciones))
     .orderBy(desc(transacciones.fecha));
   return limit !== undefined ? query.limit(limit).offset(offset) : query;
 }
