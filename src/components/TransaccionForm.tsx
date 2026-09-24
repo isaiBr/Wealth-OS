@@ -114,9 +114,16 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
           <input id="fecha" name="fecha" type="date" defaultValue={fechaDefault} required />
         </div>
 
+        <div className="field">
+          <label htmlFor="excluida" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
+            <input id="excluida" name="excluida" type="checkbox" defaultChecked={transaccion?.excluida ?? false} />
+            Sin contabilizar (excluir de totales de gasto/ingreso)
+          </label>
+        </div>
+
         {esEdicion && (
           <p className="section-sub" style={{ marginTop: -4, marginBottom: 4 }}>
-            Las etiquetas y &ldquo;sin contabilizar&rdquo; se manejan desde el botón + etiqueta de la fila, sin abrir este formulario.
+            Las etiquetas se manejan desde el botón + etiqueta de la fila, sin abrir este formulario.
           </p>
         )}
 

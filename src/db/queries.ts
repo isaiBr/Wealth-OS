@@ -148,11 +148,6 @@ export async function alternarTagDeTransaccion(transaccionId: number, tagId: num
   }
 }
 
-/** Prende/apaga "sin contabilizar" en una transacción — mismo picker rápido, sin pasar por el form completo. */
-export async function alternarExcluida(transaccionId: number, excluida: boolean): Promise<void> {
-  await db.update(transacciones).set({ excluida }).where(eq(transacciones.id, transaccionId));
-}
-
 function signo(tipo: string): 1 | -1 {
   return tipo === "ingreso" || tipo === "devolucion" || tipo === "ajuste" ? 1 : -1;
 }

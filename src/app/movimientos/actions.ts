@@ -10,7 +10,6 @@ import {
   transaccionesDelMes,
   tagsPorTransaccion,
   alternarTagDeTransaccion,
-  alternarExcluida,
   crearTag,
   type Tag,
   type FiltrosMovimientos,
@@ -32,9 +31,9 @@ function horaActualPeru(): string {
   return `${obtener("hour")}:${obtener("minute")}:${obtener("second")}`;
 }
 
-// Tags y "sin contabilizar" ya NO se editan acá — viven en el picker rápido
-// de la fila (ver alternarTagAction/alternarExcluidaAction abajo), así no
-// hace falta abrir el formulario completo solo para eso.
+// Las etiquetas siguen sin editarse acá — viven en el picker rápido de la
+// fila (ver alternarTagAction abajo), así no hace falta abrir el formulario
+// completo solo para eso. "Sin contabilizar" sí se edita acá (ver excluida).
 function leerCampos(formData: FormData) {
   const cuentaId = Number(formData.get("cuentaId"));
   const tipo = String(formData.get("tipo") ?? "");
@@ -43,12 +42,13 @@ function leerCampos(formData: FormData) {
   const categoriaIdRaw = formData.get("categoriaId");
   const categoriaId = categoriaIdRaw && categoriaIdRaw !== "" ? Number(categoriaIdRaw) : null;
   const fechaInput = String(formData.get("fecha") ?? "");
+  const excluida = formData.get("excluida") === "on";
 
   if (!cuentaId || !tipo || !monto || Number.isNaN(monto) || !comercio || !fechaInput) {
     throw new Error("Datos de transacción incompletos");
   }
 
-  return { cuentaId, tipo, monto, comercio, categoriaId, fecha: `${fechaInput}T${horaActualPeru()}` };
+  return { cuentaId, tipo, monto, comercio, categoriaId, excluida, fecha: `${fechaInput}T${horaActualPeru()}` };
 }
 
 export async function crearTransaccionAction(formData: FormData) {
@@ -86,9 +86,7 @@ export async function actualizarTransaccionAction(formData: FormData) {
     }
   }
 
-  // El form ya no trae "excluida" — se preserva el valor actual tal cual
-  // (se gestiona desde el picker rápido, ver alternarExcluidaAction).
-  await actualizarTransaccion({ id, ...campos, excluida: transaccionOriginal?.excluida ?? false });
+  await actualizarTransaccion({ id, ...campos });
 
   // Aprendizaje: guardar regla de categorización si se asignó una categoría
   // (salvo que el usuario lo haya apagado en Configuración)
@@ -112,13 +110,6 @@ export async function obtenerTransaccionesAction(mes: string, offset: number, fi
 
 export async function alternarTagAction(transaccionId: number, tagId: number, activo: boolean) {
   await alternarTagDeTransaccion(transaccionId, tagId, activo);
-  revalidatePath("/movimientos");
-  revalidatePath("/presupuesto");
-  revalidatePath("/");
-}
-
-export async function alternarExcluidaAction(transaccionId: number, excluida: boolean) {
-  await alternarExcluida(transaccionId, excluida);
   revalidatePath("/movimientos");
   revalidatePath("/presupuesto");
   revalidatePath("/");
