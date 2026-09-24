@@ -5,6 +5,7 @@ import { Modal } from "@/components/Modal";
 import {
   crearMetaCompraAction,
   editarMetaCompraAction,
+  actualizarMontoAhorradoAction,
   vincularCompraCuotaAMetaAction,
   cambiarEstadoMetaAction,
   eliminarMetaCompraAction,
@@ -42,6 +43,8 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
   const [editando, setEditando] = useState<MetaCompraConProgreso | undefined>(undefined);
   const [guardando, setGuardando] = useState(false);
   const [procesandoId, setProcesandoId] = useState<number | null>(null);
+  const [editandoMonto, setEditandoMonto] = useState<MetaCompraConProgreso | null>(null);
+  const [guardandoMonto, setGuardandoMonto] = useState(false);
 
   function abrirCreacion() {
     setEditando(undefined);
@@ -95,6 +98,18 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
     }
   }
 
+  async function handleActualizarMonto(formData: FormData) {
+    if (!editandoMonto) return;
+    setGuardandoMonto(true);
+    try {
+      const monto = parseFloat(String(formData.get("montoAhorrado") ?? ""));
+      await actualizarMontoAhorradoAction(editandoMonto.id, monto);
+      setEditandoMonto(null);
+    } finally {
+      setGuardandoMonto(false);
+    }
+  }
+
   return (
     <>
       <div className="section-head">
@@ -120,8 +135,19 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
                   <span className="cifras">
                     <strong className="tabular">S/ {FORMATO.format(m.progreso)}</strong> / S/ {FORMATO.format(m.precioObjetivo)}
                   </span>
-                  <button className="edit-btn" type="button" onClick={() => abrirEdicion(m)} aria-label={`Editar meta ${m.nombre}`}>
-                    ✎
+                  {m.categoriaId === null && m.metodoPago !== "cuotas" && (
+                    <button
+                      className="edit-btn"
+                      type="button"
+                      aria-label={`Actualizar monto ahorrado de ${m.nombre}`}
+                      title="Actualizar monto ahorrado"
+                      onClick={() => setEditandoMonto(m)}
+                    >
+                      ✎
+                    </button>
+                  )}
+                  <button className="edit-btn" type="button" onClick={() => abrirEdicion(m)} aria-label={`Editar meta ${m.nombre}`} title="Editar nombre, precio, fecha y método">
+                    ⚙
                   </button>
                   <button
                     className="edit-btn"
@@ -219,6 +245,40 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
               </button>
               <button type="submit" className="btn-primary" disabled={guardando}>
                 {guardando ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {editandoMonto && (
+        <Modal onClose={() => setEditandoMonto(null)}>
+          <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
+            Actualizar monto ahorrado — {editandoMonto.nombre}
+          </h2>
+          <form action={handleActualizarMonto}>
+            <div className="field">
+              <label htmlFor="montoAhorrado">Monto ahorrado (S/)</label>
+              <input
+                id="montoAhorrado"
+                name="montoAhorrado"
+                type="number"
+                step="0.01"
+                min="0"
+                defaultValue={editandoMonto.montoAhorrado.toFixed(2)}
+                required
+              />
+            </div>
+            <p className="section-sub" style={{ marginTop: 0 }}>
+              Es el monto total que ya tienes apartado para esta meta, no un aporte — lo actualizas a mano, no hace
+              falta registrar un movimiento.
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setEditandoMonto(null)} disabled={guardandoMonto}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary" disabled={guardandoMonto}>
+                {guardandoMonto ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </form>

@@ -772,8 +772,9 @@ export interface MetaCompraConProgreso {
   fechaDeseada: string | null;
   metodoPago: string;
   estado: string;
-  categoriaId: number;
+  categoriaId: number | null;
   compraCuotaId: number | null;
+  montoAhorrado: number;
   progreso: number;
   sugerenciaMensual: number | null;
 }
@@ -785,21 +786,18 @@ export interface NuevaMetaCompra {
   metodoPago: string;
 }
 
-/**
- * Crea la meta Y su categoría dedicada (bucket 'ahorro') en el mismo paso —
- * esa categoría es la que trackea el progreso, nunca un número aparte (ver
- * comentario en schema.ts, mismo principio que fondoEmergencia).
- */
+/** El progreso se lleva a mano en `montoAhorrado` (ver comentario en schema.ts) — sin categoría autogenerada. */
 export async function crearMetaCompra(input: NuevaMetaCompra): Promise<void> {
-  const [categoria] = await db
-    .insert(categorias)
-    .values({ nombre: `Meta: ${input.nombre}`, bucket: "ahorro" })
-    .returning({ id: categorias.id });
-  await db.insert(metasCompra).values({ ...input, categoriaId: categoria.id });
+  await db.insert(metasCompra).values(input);
 }
 
 export async function editarMetaCompra(id: number, input: NuevaMetaCompra): Promise<void> {
   await db.update(metasCompra).set(input).where(eq(metasCompra.id, id));
+}
+
+/** Corrige el monto ahorrado de una meta nueva (sin categoría dedicada) — solo aplica a esas. */
+export async function actualizarMontoAhorradoMeta(id: number, montoAhorrado: number): Promise<void> {
+  await db.update(metasCompra).set({ montoAhorrado }).where(eq(metasCompra.id, id));
 }
 
 /** Vincula (o desvincula, con null) una compra en cuotas ya concretada — para método 'cuotas'. */
@@ -811,12 +809,14 @@ export async function cambiarEstadoMeta(id: number, estado: "activa" | "completa
   await db.update(metasCompra).set({ estado }).where(eq(metasCompra.id, id));
 }
 
-/** Borra la meta pero archiva (no borra) su categoría — así los movimientos ya categorizados ahí no pierden el nombre. */
+/** Borra la meta; si es una meta vieja con categoría dedicada, la archiva (no borra) para no perder el nombre de los movimientos ya categorizados ahí. */
 export async function eliminarMetaCompra(id: number): Promise<void> {
   const meta = await db.select().from(metasCompra).where(eq(metasCompra.id, id)).get();
   if (!meta) return;
   await db.delete(metasCompra).where(eq(metasCompra.id, id));
-  await db.update(categorias).set({ archivada: true }).where(eq(categorias.id, meta.categoriaId));
+  if (meta.categoriaId !== null) {
+    await db.update(categorias).set({ archivada: true }).where(eq(categorias.id, meta.categoriaId));
+  }
 }
 
 export async function listarComprasCuotas() {
@@ -825,10 +825,10 @@ export async function listarComprasCuotas() {
 
 /**
  * Progreso: si es 'cuotas' y ya está vinculada a una compra real, se deriva
- * de ahí (cuotas pagadas × monto de cuota). Si no, se deriva de la suma
- * histórica (todo el tiempo, no solo el mes) de movimientos en la categoría
- * dedicada — "aportar a la meta" es simplemente registrar un movimiento con
- * esa categoría, como cualquier otro.
+ * de ahí (cuotas pagadas × monto de cuota). Si tiene categoría dedicada
+ * (metas viejas, de antes de Fase 3), se deriva de la suma histórica de
+ * movimientos en esa categoría — comportamiento legado, no se migra. Toda
+ * meta nueva (categoriaId null) usa `montoAhorrado`, editado a mano.
  */
 export async function listarMetasCompra(): Promise<MetaCompraConProgreso[]> {
   const metas = await db.select().from(metasCompra).where(eq(metasCompra.estado, "activa")).orderBy(desc(metasCompra.createdAt));
@@ -842,9 +842,11 @@ export async function listarMetasCompra(): Promise<MetaCompraConProgreso[]> {
         const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compra.id));
         progreso = (compra.cuotasPagadas + pagos.length) * compra.montoCuota;
       }
-    } else {
+    } else if (m.categoriaId !== null) {
       const txs = await db.select().from(transacciones).where(eq(transacciones.categoriaId, m.categoriaId));
       progreso = txs.reduce((acc, t) => acc + (t.esTransferenciaInterna || t.excluida ? 0 : t.monto), 0);
+    } else {
+      progreso = m.montoAhorrado;
     }
 
     let sugerenciaMensual: number | null = null;

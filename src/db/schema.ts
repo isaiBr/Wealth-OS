@@ -213,25 +213,27 @@ export const pagosCuota = sqliteTable(
 
 // --- Metas de compra --------------------------------------------------------
 // Presupuesto para algo puntual que querés comprar (no un gasto recurrente).
-// Mismo principio que fondoEmergencia: el progreso NO se guarda como un
-// número aparte que se pueda desincronizar — se deriva en vivo de una
-// categoría dedicada (categoriaId, bucket 'ahorro', autogenerada al crear la
-// meta). Aportar a la meta es simplemente registrar un movimiento con esa
-// categoría, igual que cualquier otro gasto/ahorro de la app.
+// Hasta Fase 3 del plan de correcciones, el progreso se derivaba de una
+// categoría dedicada (bucket 'ahorro', autogenerada al crear la meta) —
+// "aportar" era registrar un movimiento con esa categoría. Se descartó:
+// forzaba una transacción bancaria por algo que muchas veces es solo "ya
+// aparté esta plata", y de paso inflaba el bucket "Ahorro" del Plan de
+// gasto consciente con compras puntuales que no son ahorro real. Las metas
+// nuevas usan `montoAhorrado` (editable a mano) y `categoriaId` null; las
+// metas viejas conservan su categoría y siguen derivando el progreso de ahí
+// (ver listarMetasCompra en queries.ts) — no se migran datos históricos.
 export const metasCompra = sqliteTable("metas_compra", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   nombre: text("nombre").notNull(),
   precioObjetivo: real("precio_objetivo").notNull(),
   fechaDeseada: text("fecha_deseada"), // "YYYY-MM-DD", opcional
   metodoPago: text("metodo_pago").notNull(), // 'contado' | 'cuotas' | 'cobranzas'
-  categoriaId: integer("categoria_id").references(() => categorias.id).notNull(),
+  categoriaId: integer("categoria_id").references(() => categorias.id),
   // Si metodoPago='cuotas' y ya se concretó la compra, se vincula acá — el
   // progreso pasa a leerse de comprasCuotas en vez de la categoría.
   compraCuotaId: integer("compra_cuota_id").references(() => comprasCuotas.id),
   estado: text("estado").notNull().default("activa"), // 'activa' | 'completada' | 'cancelada'
-  // Aporte manual a la meta (Fase 3 del plan de correcciones) — la columna ya
-  // existe en la base real (migración 0017), esto solo reconcilia schema.ts;
-  // la lógica que lo usa (reemplaza la categoría autogenerada) va en Fase 3.
+  // Aporte manual a la meta — solo lo usan las metas nuevas (categoriaId null).
   montoAhorrado: real("monto_ahorrado").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });

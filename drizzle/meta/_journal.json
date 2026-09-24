@@ -134,6 +134,13 @@
       "when": 1790277438577,
       "tag": "0018_slim_impossible_man",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "6",
+      "when": 1790277977758,
+      "tag": "0019_bitter_eternals",
+      "breakpoints": true
     }
   ]
 }

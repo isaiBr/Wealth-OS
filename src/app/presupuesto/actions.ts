@@ -9,6 +9,7 @@ import {
   desglosePorEtiqueta,
   crearMetaCompra,
   editarMetaCompra,
+  actualizarMontoAhorradoMeta,
   vincularCompraCuotaAMeta,
   cambiarEstadoMeta,
   eliminarMetaCompra,
@@ -87,6 +88,13 @@ export async function editarMetaCompraAction(formData: FormData) {
   const id = Number(formData.get("id"));
   if (!id) throw new Error("Falta el id de la meta");
   await editarMetaCompra(id, leerCamposMeta(formData));
+  revalidatePath("/presupuesto");
+  revalidatePath("/");
+}
+
+export async function actualizarMontoAhorradoAction(id: number, montoAhorrado: number) {
+  if (Number.isNaN(montoAhorrado) || montoAhorrado < 0) throw new Error("Monto inválido");
+  await actualizarMontoAhorradoMeta(id, montoAhorrado);
   revalidatePath("/presupuesto");
   revalidatePath("/");
 }
