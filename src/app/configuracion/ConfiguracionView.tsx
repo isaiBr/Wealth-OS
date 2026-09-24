@@ -11,13 +11,7 @@ import {
   eliminarTagAction,
 } from "./actions";
 import type { Categoria, Tag } from "@/db/queries";
-
-const BUCKET_LABEL: Record<string, string> = {
-  fijos: "Costos fijos",
-  inversion: "Inversiones",
-  ahorro: "Ahorro",
-  libre: "Gasto libre",
-};
+import { BUCKETS_ORDEN, BUCKET_LABEL } from "@/logic/buckets";
 
 interface Props {
   categorias: Categoria[];
@@ -104,44 +98,55 @@ export function ConfiguracionView({ categorias, tags }: Props) {
       </div>
       <div className="card" style={{ padding: "6px 18px" }}>
         {categorias.length === 0 && <p className="empty-note">Todavía no hay categorías.</p>}
-        {categorias.map((c) => (
-          <div className="cfg-row" key={c.id}>
-            <div className="cfg-left">
-              <span
-                className="legend-dot"
-                style={{ background: c.archivada ? "var(--ink-faint)" : "var(--accent)", opacity: c.archivada ? 0.5 : 1 }}
-              />
-              <div className="cfg-info">
-                <div className="cfg-nombre">
-                  {c.nombre}
-                  {c.archivada && <span className="ai-badge">Archivada</span>}
+        {BUCKETS_ORDEN.map((bucket) => {
+          const categoriasDelBucket = categorias.filter((c) => c.bucket === bucket);
+          if (categoriasDelBucket.length === 0) return null;
+          return (
+            <details className="acordeon-bucket" key={bucket} open>
+              <summary>
+                <span>{BUCKET_LABEL[bucket]}</span>
+                <span className="n">{categoriasDelBucket.length}</span>
+              </summary>
+              {categoriasDelBucket.map((c) => (
+                <div className="cfg-row" key={c.id}>
+                  <div className="cfg-left">
+                    <span
+                      className="legend-dot"
+                      style={{ background: c.archivada ? "var(--ink-faint)" : "var(--accent)", opacity: c.archivada ? 0.5 : 1 }}
+                    />
+                    <div className="cfg-info">
+                      <div className="cfg-nombre">
+                        {c.nombre}
+                        {c.archivada && <span className="ai-badge">Archivada</span>}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row-right">
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      aria-label={`Editar categoría ${c.nombre}`}
+                      title="Editar"
+                      onClick={() => abrirEdicion(c)}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      type="button"
+                      className="edit-btn"
+                      aria-label={c.archivada ? `Desarchivar categoría ${c.nombre}` : `Archivar categoría ${c.nombre}`}
+                      title={c.archivada ? "Desarchivar" : "Archivar"}
+                      disabled={procesandoId === c.id}
+                      onClick={() => handleArchivar(c)}
+                    >
+                      {c.archivada ? "↺" : "⊘"}
+                    </button>
+                  </div>
                 </div>
-                <div className="cfg-meta">Bucket: {BUCKET_LABEL[c.bucket] ?? c.bucket}</div>
-              </div>
-            </div>
-            <div className="row-right">
-              <button
-                type="button"
-                className="edit-btn"
-                aria-label={`Editar categoría ${c.nombre}`}
-                title="Editar"
-                onClick={() => abrirEdicion(c)}
-              >
-                ✎
-              </button>
-              <button
-                type="button"
-                className="edit-btn"
-                aria-label={c.archivada ? `Desarchivar categoría ${c.nombre}` : `Archivar categoría ${c.nombre}`}
-                title={c.archivada ? "Desarchivar" : "Archivar"}
-                disabled={procesandoId === c.id}
-                onClick={() => handleArchivar(c)}
-              >
-                {c.archivada ? "↺" : "⊘"}
-              </button>
-            </div>
-          </div>
-        ))}
+              ))}
+            </details>
+          );
+        })}
       </div>
       </TabPanel>
 

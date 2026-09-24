@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Modal } from "./Modal";
 import { crearTransaccionAction, actualizarTransaccionAction } from "@/app/movimientos/actions";
 import type { Cuenta, Categoria, Transaccion } from "@/db/queries";
+import { BUCKETS_ORDEN, BUCKET_LABEL } from "@/logic/buckets";
 
 interface Props {
   cuentas: Cuenta[];
@@ -15,6 +16,13 @@ interface Props {
 export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: Props) {
   const [guardando, setGuardando] = useState(false);
   const esEdicion = !!transaccion;
+
+  const categoriaActual = categorias.find((c) => c.id === transaccion?.categoriaId);
+  const [bucket, setBucket] = useState(categoriaActual?.bucket ?? "");
+  const [categoriaId, setCategoriaId] = useState(transaccion?.categoriaId ? String(transaccion.categoriaId) : "");
+  const categoriasDelBucket = categorias.filter(
+    (c) => c.bucket === bucket && (!c.archivada || c.id === transaccion?.categoriaId)
+  );
 
   async function handleSubmit(formData: FormData) {
     setGuardando(true);
@@ -96,18 +104,45 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
         </div>
 
         <div className="field">
-          <label htmlFor="categoriaId">Categoría</label>
-          <select id="categoriaId" name="categoriaId" defaultValue={transaccion?.categoriaId ?? ""}>
+          <label htmlFor="categoriaBucket">Categoría — bucket</label>
+          <select
+            id="categoriaBucket"
+            value={bucket}
+            onChange={(e) => {
+              setBucket(e.target.value);
+              setCategoriaId("");
+            }}
+          >
             <option value="">Sin categoría</option>
-            {categorias
-              .filter((c) => !c.archivada || c.id === transaccion?.categoriaId)
-              .map((c) => (
+            {BUCKETS_ORDEN.map((b) => (
+              <option key={b} value={b}>
+                {BUCKET_LABEL[b]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {bucket && (
+          <div className="field">
+            <label htmlFor="categoriaId">Categoría dentro de &ldquo;{BUCKET_LABEL[bucket]}&rdquo;</label>
+            <select
+              id="categoriaId"
+              name="categoriaId"
+              value={categoriaId}
+              onChange={(e) => setCategoriaId(e.target.value)}
+              required
+            >
+              <option value="" disabled>
+                Selecciona una categoría
+              </option>
+              {categoriasDelBucket.map((c) => (
                 <option key={c.id} value={c.id}>
                   {c.nombre}
                 </option>
               ))}
-          </select>
-        </div>
+            </select>
+          </div>
+        )}
 
         <div className="field">
           <label htmlFor="fecha">Fecha</label>

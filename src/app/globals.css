@@ -1434,6 +1434,44 @@ button.tx-tag-pill.toggle.active {
 }
 
 /* ---------- categorías editables (Configuración) ---------- */
+.acordeon-bucket {
+  border-bottom: 1px solid var(--border);
+}
+.acordeon-bucket:last-of-type {
+  border-bottom: none;
+}
+.acordeon-bucket summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  list-style: none;
+}
+.acordeon-bucket summary::-webkit-details-marker {
+  display: none;
+}
+.acordeon-bucket summary::before {
+  content: "▸";
+  color: var(--ink-faint);
+  font-size: 11px;
+  margin-right: 8px;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+.acordeon-bucket[open] summary::before {
+  transform: rotate(90deg);
+}
+.acordeon-bucket summary .n {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
 .cfg-row {
   display: flex;
   justify-content: space-between;
@@ -1442,7 +1480,7 @@ button.tx-tag-pill.toggle.active {
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
 }
-.cfg-row:last-child {
+.acordeon-bucket .cfg-row:last-child {
   border-bottom: none;
 }
 .cfg-left {
