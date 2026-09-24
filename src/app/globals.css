@@ -432,6 +432,9 @@ button {
   cursor: pointer;
   padding: 0;
 }
+.text-link.danger {
+  color: var(--danger);
+}
 
 /* ---------- submenu de pills dentro de una pantalla (mobile) ---------- */
 .tab-pills {

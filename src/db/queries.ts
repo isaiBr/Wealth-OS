@@ -238,6 +238,11 @@ export async function obtenerTransaccion(id: number) {
   return db.select().from(transacciones).where(eq(transacciones.id, id)).get();
 }
 
+/** Las etiquetas de la transacción se borran solas (cascade en transacciones_tags). */
+export async function eliminarTransaccion(id: number): Promise<void> {
+  await db.delete(transacciones).where(eq(transacciones.id, id));
+}
+
 export async function resumenMes(mes: string) {
   const txs = await transaccionesDelMes(mes);
   let ingresos = 0;

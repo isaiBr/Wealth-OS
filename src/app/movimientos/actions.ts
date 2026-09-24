@@ -5,6 +5,7 @@ import {
   actualizarTransaccion,
   crearTransaccionManual,
   obtenerTransaccion,
+  eliminarTransaccion,
   guardarOActualizarRegla,
   obtenerConfiguracionIA,
   transaccionesDelMes,
@@ -99,6 +100,20 @@ export async function actualizarTransaccionAction(formData: FormData) {
   }
 
   revalidatePath("/movimientos");
+  revalidatePath("/");
+}
+
+export async function eliminarTransaccionAction(id: number) {
+  try {
+    await eliminarTransaccion(id);
+  } catch {
+    // La única FK que puede bloquear el borrado: esta transacción es el
+    // origen de una compra en cuotas (transaccionOrigenId) — el mensaje
+    // genérico del driver no dice eso, así que se traduce acá.
+    throw new Error("No se puede eliminar: está vinculada a una compra en cuotas.");
+  }
+  revalidatePath("/movimientos");
+  revalidatePath("/presupuesto");
   revalidatePath("/");
 }
 

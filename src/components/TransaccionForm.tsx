@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Modal } from "./Modal";
-import { crearTransaccionAction, actualizarTransaccionAction } from "@/app/movimientos/actions";
+import { crearTransaccionAction, actualizarTransaccionAction, eliminarTransaccionAction } from "@/app/movimientos/actions";
 import type { Cuenta, Categoria, Transaccion } from "@/db/queries";
 import { BUCKETS_ORDEN, BUCKET_LABEL } from "@/logic/buckets";
 
@@ -15,6 +15,8 @@ interface Props {
 
 export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: Props) {
   const [guardando, setGuardando] = useState(false);
+  const [eliminando, setEliminando] = useState(false);
+  const [errorEliminar, setErrorEliminar] = useState<string | null>(null);
   const esEdicion = !!transaccion;
 
   const categoriaActual = categorias.find((c) => c.id === transaccion?.categoriaId);
@@ -36,6 +38,20 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
       onClose();
     } finally {
       setGuardando(false);
+    }
+  }
+
+  async function handleEliminar() {
+    if (!transaccion) return;
+    setErrorEliminar(null);
+    setEliminando(true);
+    try {
+      await eliminarTransaccionAction(transaccion.id);
+      onClose();
+    } catch (e) {
+      setErrorEliminar(e instanceof Error ? e.message : "No se pudo eliminar");
+    } finally {
+      setEliminando(false);
     }
   }
 
@@ -159,6 +175,23 @@ export function TransaccionForm({ cuentas, categorias, transaccion, onClose }: P
         {esEdicion && (
           <p className="section-sub" style={{ marginTop: -4, marginBottom: 4 }}>
             Las etiquetas se manejan desde el botón + etiqueta de la fila, sin abrir este formulario.
+          </p>
+        )}
+
+        {esEdicion && (
+          <button
+            type="button"
+            className="text-link danger"
+            style={{ marginBottom: 16 }}
+            disabled={eliminando}
+            onClick={handleEliminar}
+          >
+            {eliminando ? "Eliminando..." : "Eliminar movimiento"}
+          </button>
+        )}
+        {errorEliminar && (
+          <p className="section-sub" style={{ color: "var(--danger)", marginTop: -12, marginBottom: 12 }}>
+            {errorEliminar}
           </p>
         )}
 
