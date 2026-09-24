@@ -69,8 +69,13 @@ export default async function InicioPage() {
   const mes = mesActual();
   const cuentas = await listarCuentas();
   const saldos = await Promise.all(cuentas.map((c) => saldoCuenta(c.id)));
-  // "Líquidas" excluye tarjetas de crédito — esas son deuda, no plata disponible.
-  const saldoTotal = cuentas.reduce((acc, c, i) => (c.tipo === "tarjeta_credito" ? acc : acc + saldos[i]), 0);
+  // "Líquidas" excluye tarjetas de crédito siempre (son deuda, no plata
+  // disponible) y, además, cualquier cuenta que el usuario haya marcado como
+  // no-líquida a mano (ej. una cuenta de inversión o compartida).
+  const saldoTotal = cuentas.reduce(
+    (acc, c, i) => (c.tipo === "tarjeta_credito" || !c.incluirEnLiquidas ? acc : acc + saldos[i]),
+    0
+  );
   const destacadas = cuentas
     .map((c, i) => ({ cuenta: c, saldo: saldos[i] }))
     .filter((x) => x.cuenta.destacada);

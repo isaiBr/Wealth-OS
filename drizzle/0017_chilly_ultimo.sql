@@ -1,0 +1,1 @@
+ALTER TABLE `metas_compra` ADD `monto_ahorrado` real DEFAULT 0 NOT NULL;

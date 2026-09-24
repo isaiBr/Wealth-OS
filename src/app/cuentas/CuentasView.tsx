@@ -19,6 +19,7 @@ interface CuentaConSaldo {
   saldo: number;
   destacada: boolean;
   billetera: string | null;
+  incluirEnLiquidas: boolean;
 }
 
 interface Identificador {
@@ -223,6 +224,20 @@ export function CuentasView({
                 <option value="plin">Plin</option>
               </select>
             </div>
+            {editandoCuenta.tipo !== "tarjeta_credito" && (
+              <div className="field">
+                <div className="cfg-toggle-row">
+                  <div className="cfg-info">
+                    <div className="cfg-nombre">Contar como plata líquida</div>
+                    <div className="cfg-meta">Se suma a &quot;Disponible real&quot; en Inicio</div>
+                  </div>
+                  <label className="switch">
+                    <input type="checkbox" name="incluirEnLiquidas" defaultChecked={editandoCuenta.incluirEnLiquidas} />
+                    <span className="track" />
+                  </label>
+                </div>
+              </div>
+            )}
             <div className="field">
               <label>Últimos dígitos (para identificar transacciones de correos)</label>
               {(identificadoresPorCuenta[editandoCuenta.id] ?? []).map((idf) => (

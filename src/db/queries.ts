@@ -516,6 +516,10 @@ export async function actualizarBilletera(cuentaId: number, billetera: "yape" | 
   await db.update(cuentas).set({ billetera }).where(eq(cuentas.id, cuentaId));
 }
 
+export async function actualizarIncluirEnLiquidas(cuentaId: number, incluir: boolean) {
+  await db.update(cuentas).set({ incluirEnLiquidas: incluir }).where(eq(cuentas.id, cuentaId));
+}
+
 export async function renombrarCuenta(cuentaId: number, nombre: string) {
   await db.update(cuentas).set({ nombre }).where(eq(cuentas.id, cuentaId));
 }

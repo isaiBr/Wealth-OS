@@ -16,6 +16,12 @@ export const cuentas = sqliteTable("cuentas", {
   // debe mostrar las 8 cuentas si el usuario solo usa 2-3 en el día a día.
   // La lista completa de todas formas vive en la pestaña Cuentas.
   destacada: integer("destacada", { mode: "boolean" }).notNull().default(false),
+  // Si cuenta para "disponible real" (Inicio) como plata líquida. Antes esto
+  // era implícito por tipo (todo lo que no es tarjeta_credito), pero hay
+  // cuentas de ahorro/corriente que tampoco son "plata disponible hoy" (ej.
+  // una cuenta de inversión, una compartida). Tarjeta de crédito sigue
+  // excluida siempre, sin importar este flag — es deuda, no plata propia.
+  incluirEnLiquidas: integer("incluir_en_liquidas", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 
@@ -223,6 +229,10 @@ export const metasCompra = sqliteTable("metas_compra", {
   // progreso pasa a leerse de comprasCuotas en vez de la categoría.
   compraCuotaId: integer("compra_cuota_id").references(() => comprasCuotas.id),
   estado: text("estado").notNull().default("activa"), // 'activa' | 'completada' | 'cancelada'
+  // Aporte manual a la meta (Fase 3 del plan de correcciones) — la columna ya
+  // existe en la base real (migración 0017), esto solo reconcilia schema.ts;
+  // la lógica que lo usa (reemplaza la categoría autogenerada) va en Fase 3.
+  montoAhorrado: real("monto_ahorrado").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 

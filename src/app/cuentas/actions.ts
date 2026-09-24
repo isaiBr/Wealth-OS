@@ -5,6 +5,7 @@ import {
   crearCuenta,
   alternarDestacada,
   actualizarBilletera,
+  actualizarIncluirEnLiquidas,
   renombrarCuenta,
   ajustarSaldoCuenta,
   agregarIdentificadorCuenta,
@@ -52,11 +53,13 @@ export async function editarCuentaAction(formData: FormData) {
   const nombre = String(formData.get("nombre") ?? "").trim();
   const valor = String(formData.get("billetera") ?? "");
   const billetera = valor === "yape" || valor === "plin" ? valor : null;
+  const incluirEnLiquidas = formData.get("incluirEnLiquidas") === "on";
 
   if (Number.isNaN(cuentaId) || !nombre) throw new Error("Datos de cuenta inválidos");
 
   await renombrarCuenta(cuentaId, nombre);
   await actualizarBilletera(cuentaId, billetera);
+  await actualizarIncluirEnLiquidas(cuentaId, incluirEnLiquidas);
   revalidatePath("/cuentas");
   revalidatePath("/movimientos");
   revalidatePath("/");

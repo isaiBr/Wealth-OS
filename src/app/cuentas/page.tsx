@@ -25,6 +25,7 @@ export default async function CuentasPage() {
       tipo: c.tipo,
       destacada: c.destacada,
       billetera: c.billetera,
+      incluirEnLiquidas: c.incluirEnLiquidas,
       saldo: await saldoCuenta(c.id),
     }))
   );
