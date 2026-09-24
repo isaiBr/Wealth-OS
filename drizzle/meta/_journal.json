@@ -141,6 +141,13 @@
       "when": 1790277977758,
       "tag": "0019_bitter_eternals",
       "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "6",
+      "when": 1790278505470,
+      "tag": "0020_spooky_spot",
+      "breakpoints": true
     }
   ]
 }

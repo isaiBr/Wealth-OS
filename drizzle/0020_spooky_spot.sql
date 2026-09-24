@@ -1,0 +1,1 @@
+ALTER TABLE `categorias` DROP COLUMN `excluir_de_gasto_real`;

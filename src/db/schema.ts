@@ -52,12 +52,6 @@ export const categorias = sqliteTable("categorias", {
   bucket: text("bucket").notNull(), // 'fijos' | 'inversion' | 'ahorro' | 'libre'
   limiteMensual: real("limite_mensual"),
   usaPromedioMovil: integer("usa_promedio_movil", { mode: "boolean" }).notNull().default(false),
-  // Para dinero que sale de tus cuentas pero no es "tu" gasto real (alguien
-  // más te lo paga/devuelve fuera de la app, plata que solo pasó por ti,
-  // pruebas). Se sigue viendo en Movimientos y en el saldo de la cuenta
-  // (la plata sí salió), pero se excluye de los totales de gasto real
-  // (resumen del mes, presupuesto por categoría, gasto hormiga).
-  excluirDeGastoReal: integer("excluir_de_gasto_real", { mode: "boolean" }).notNull().default(false),
   // Ocultarla de los selectores de categoría (Movimientos) sin borrarla ni
   // tocar los movimientos históricos que ya la tienen asignada.
   archivada: integer("archivada", { mode: "boolean" }).notNull().default(false),

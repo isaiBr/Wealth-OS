@@ -37,12 +37,6 @@ export async function listarCategorias() {
   return db.select().from(categorias).orderBy(asc(categorias.nombre));
 }
 
-/** Categorías marcadas `excluirDeGastoReal` (plata que salió pero no es tu gasto real — ver schema.ts). */
-async function idsCategoriasExcluidas(): Promise<Set<number>> {
-  const todas = await listarCategorias();
-  return new Set(todas.filter((c) => c.excluirDeGastoReal).map((c) => c.id));
-}
-
 function normalizarPatron(comercio: string): string {
   return comercio.trim().toUpperCase();
 }
@@ -246,7 +240,6 @@ export async function obtenerTransaccion(id: number) {
 
 export async function resumenMes(mes: string) {
   const txs = await transaccionesDelMes(mes);
-  const excluidas = await idsCategoriasExcluidas();
   let ingresos = 0;
   let gastos = 0;
   let transferenciasInternas = 0;
@@ -262,10 +255,6 @@ export async function resumenMes(mes: string) {
       ingresos += t.monto;
       continue;
     }
-    // excluirDeGastoReal es "no cuenta como gasto real" (transferencias entre
-    // billeteras propias, pruebas, etc.) — no debe aplicarse a ingresos, solo
-    // llegamos acá para los tipos que sí son gasto/devolución.
-    if (t.categoriaId !== null && excluidas.has(t.categoriaId)) continue;
     if (t.tipo === "devolucion") {
       // No es un ingreso real ni un gasto nuevo — reduce el gasto que ya se
       // había contado (o lo deja en 0 si la compra original no está en el
@@ -301,7 +290,6 @@ export async function presupuestoPorCategoria(mes: string): Promise<{
 }> {
   const todasCategorias = await listarCategorias();
   const txs = await transaccionesDelMes(mes);
-  const excluidas = await idsCategoriasExcluidas();
 
   // Una devolución no trae categoría propia (no es un gasto nuevo) — para
   // que la suma por categoría cuadre con el total, se resta de la misma
@@ -327,7 +315,6 @@ export async function presupuestoPorCategoria(mes: string): Promise<{
       if (signo > 0) sinCategorizar += t.monto;
       continue;
     }
-    if (excluidas.has(categoriaId)) continue;
     gastoPorCategoria.set(categoriaId, (gastoPorCategoria.get(categoriaId) ?? 0) + signo * t.monto);
   }
 
@@ -890,11 +877,9 @@ export async function gastoHormigaAnualizado(mes: string): Promise<GastoHormiga>
 
   const todasCategorias = await listarCategorias();
   const categoriaPorId = new Map(todasCategorias.map((c) => [c.id, c]));
-  const excluidas = await idsCategoriasExcluidas();
-  const filasContables = filas.filter((f) => f.categoriaId === null || !excluidas.has(f.categoriaId));
 
   const porCategoriaMap = new Map<string, number>();
-  for (const f of filasContables) {
+  for (const f of filas) {
     const nombre = (f.categoriaId && categoriaPorId.get(f.categoriaId)?.nombre) || "Sin categoría";
     porCategoriaMap.set(nombre, (porCategoriaMap.get(nombre) ?? 0) + f.monto);
   }
@@ -902,7 +887,7 @@ export async function gastoHormigaAnualizado(mes: string): Promise<GastoHormiga>
     .map(([nombre, monto]) => ({ nombre, monto }))
     .sort((a, b) => b.monto - a.monto);
 
-  const totalMes = filasContables.reduce((acc, f) => acc + f.monto, 0);
+  const totalMes = filas.reduce((acc, f) => acc + f.monto, 0);
   return { porCategoria, totalMes, proyeccionAnual: totalMes * 12 };
 }
 
