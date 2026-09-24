@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { Modal } from "@/components/Modal";
-import { alternarPagoCuotaMesAction, editarCuotasPagadasAction } from "./actions";
-import type { CuotaActiva } from "@/db/queries";
+import { alternarPagoCuotaMesAction, editarCuotasPagadasAction, crearCompraCuotasAction } from "./actions";
+import type { CuotaActiva, Tarjeta } from "@/db/queries";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const FORMATO_MES = new Intl.DateTimeFormat("es-PE", { month: "long", year: "numeric" });
@@ -20,11 +20,21 @@ function nombreMes(mesISO: string): string {
   return nombre.charAt(0).toUpperCase() + nombre.slice(1);
 }
 
-export function CuotasView({ cuotas, totalMensual }: { cuotas: CuotaActiva[]; totalMensual: number }) {
+export function CuotasView({
+  cuotas,
+  totalMensual,
+  tarjetas,
+}: {
+  cuotas: CuotaActiva[];
+  totalMensual: number;
+  tarjetas: Tarjeta[];
+}) {
   const [pendientes, setPendientes] = useState<Set<number>>(new Set());
   const [, startTransition] = useTransition();
   const [editando, setEditando] = useState<CuotaActiva | null>(null);
   const [guardando, setGuardando] = useState(false);
+  const [agregando, setAgregando] = useState(false);
+  const [creando, setCreando] = useState(false);
 
   function alternar(c: CuotaActiva) {
     setPendientes((prev) => new Set(prev).add(c.id));
@@ -51,12 +61,26 @@ export function CuotasView({ cuotas, totalMensual }: { cuotas: CuotaActiva[]; to
     }
   }
 
-  if (cuotas.length === 0) {
-    return <p className="empty-note">Sin compras en cuotas activas.</p>;
+  async function handleCrear(formData: FormData) {
+    setCreando(true);
+    try {
+      await crearCompraCuotasAction(formData);
+      setAgregando(false);
+    } finally {
+      setCreando(false);
+    }
   }
 
   return (
     <>
+      <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: cuotas.length > 0 ? 12 : 8 }}>
+        <button type="button" className="text-link" onClick={() => setAgregando(true)}>
+          + Agregar compra en cuotas
+        </button>
+      </div>
+
+      {cuotas.length === 0 && <p className="empty-note">Sin compras en cuotas activas.</p>}
+
       {cuotas.map((c) => {
         const pct = (c.cuotasPagadasTotal / c.totalCuotas) * 100;
         return (
@@ -111,10 +135,12 @@ export function CuotasView({ cuotas, totalMensual }: { cuotas: CuotaActiva[]; to
           </div>
         );
       })}
-      <div className="cuota-total">
-        <span>Total pendiente este mes</span>
-        <span className="valor tabular">S/ {FORMATO.format(totalMensual)}</span>
-      </div>
+      {cuotas.length > 0 && (
+        <div className="cuota-total">
+          <span>Total pendiente este mes</span>
+          <span className="valor tabular">S/ {FORMATO.format(totalMensual)}</span>
+        </div>
+      )}
 
       {editando && (
         <Modal onClose={() => setEditando(null)}>
@@ -150,6 +176,62 @@ export function CuotasView({ cuotas, totalMensual }: { cuotas: CuotaActiva[]; to
               </button>
               <button type="submit" className="btn-primary" disabled={guardando}>
                 {guardando ? "Guardando..." : "Guardar"}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {agregando && (
+        <Modal onClose={() => setAgregando(false)}>
+          <h2 className="serif" style={{ fontSize: 19, marginBottom: 16 }}>
+            Agregar compra en cuotas
+          </h2>
+          <form action={handleCrear}>
+            <div className="field">
+              <label htmlFor="tarjetaId">Tarjeta</label>
+              <select id="tarjetaId" name="tarjetaId" required defaultValue="">
+                <option value="" disabled>
+                  Selecciona una tarjeta
+                </option>
+                {tarjetas.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.nombre}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="comercio-nuevo">Comercio</label>
+              <input id="comercio-nuevo" name="comercio" type="text" placeholder="Ripley" required />
+            </div>
+            <div className="field">
+              <label htmlFor="montoTotal">Monto total (S/)</label>
+              <input id="montoTotal" name="montoTotal" type="number" step="0.01" min="0.01" required />
+            </div>
+            <div className="field">
+              <label htmlFor="totalCuotas">Cantidad de cuotas</label>
+              <input id="totalCuotas" name="totalCuotas" type="number" min="1" step="1" required />
+            </div>
+            <div className="field">
+              <label htmlFor="fechaCompra">Fecha de la compra</label>
+              <input
+                id="fechaCompra"
+                name="fechaCompra"
+                type="date"
+                defaultValue={new Date().toISOString().slice(0, 10)}
+                required
+              />
+            </div>
+            <p className="section-sub" style={{ marginTop: 0 }}>
+              El monto de cada cuota se calcula solo (monto total ÷ cantidad de cuotas).
+            </p>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setAgregando(false)} disabled={creando}>
+                Cancelar
+              </button>
+              <button type="submit" className="btn-primary" disabled={creando}>
+                {creando ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </form>

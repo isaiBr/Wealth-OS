@@ -4,6 +4,7 @@ import {
   gastoHormigaAnualizado,
   listarComprasCuotas,
   listarMetasCompra,
+  listarTarjetas,
   presupuestoPorCategoria,
   suscripcionesDelMes,
 } from "@/db/queries";
@@ -38,6 +39,7 @@ export default async function PresupuestoPage({ searchParams }: Props) {
   const suscripciones = await suscripcionesDelMes(mes);
   const metas = await listarMetasCompra();
   const comprasCuotas = await listarComprasCuotas();
+  const tarjetas = await listarTarjetas();
   const porBucket = agruparPorBucket(filas);
   const gastoDelMes = filas.reduce((acc, f) => acc + f.gasto, 0);
 
@@ -164,7 +166,7 @@ export default async function PresupuestoPage({ searchParams }: Props) {
                 <div className="section-title">Cuotas activas</div>
               </div>
               <div className="card">
-                <CuotasView cuotas={cuotas} totalMensual={totalCuotas} />
+                <CuotasView cuotas={cuotas} totalMensual={totalCuotas} tarjetas={tarjetas} />
                 {cuotas.length > 0 && (
                   <p className="cuota-note">
                     Se marcan pagadas automáticamente al detectar el pago de la tarjeta, o a mano con el check si el

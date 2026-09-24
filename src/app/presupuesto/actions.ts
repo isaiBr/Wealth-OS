@@ -5,6 +5,7 @@ import {
   editarLimiteCategoria,
   alternarPagoCuotaMes,
   editarCuotasPagadas,
+  crearCompraCuotas,
   desglosePorEtiqueta,
   crearMetaCompra,
   editarMetaCompra,
@@ -43,6 +44,22 @@ export async function editarCuotasPagadasAction(compraCuotaId: number, nuevoTota
   const comercio = nuevoComercio?.trim();
   if (comercio !== undefined && !comercio) throw new Error("El nombre de la cuota no puede quedar vacío");
   await editarCuotasPagadas(compraCuotaId, nuevoTotal, comercio);
+  revalidatePath("/presupuesto");
+  revalidatePath("/");
+}
+
+export async function crearCompraCuotasAction(formData: FormData) {
+  const tarjetaId = Number(formData.get("tarjetaId"));
+  const comercio = String(formData.get("comercio") ?? "").trim();
+  const montoTotal = parseFloat(String(formData.get("montoTotal") ?? ""));
+  const totalCuotas = parseInt(String(formData.get("totalCuotas") ?? ""), 10);
+  const fechaCompra = String(formData.get("fechaCompra") ?? "").trim();
+
+  if (!tarjetaId || !comercio || Number.isNaN(montoTotal) || montoTotal <= 0 || !totalCuotas || totalCuotas < 1 || !fechaCompra) {
+    throw new Error("Datos de compra en cuotas incompletos");
+  }
+
+  await crearCompraCuotas({ tarjetaId, comercio, montoTotal, totalCuotas, fechaCompra });
   revalidatePath("/presupuesto");
   revalidatePath("/");
 }

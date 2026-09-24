@@ -19,6 +19,7 @@ import {
 } from "./schema";
 
 export type Cuenta = typeof cuentas.$inferSelect;
+export type Tarjeta = typeof tarjetas.$inferSelect;
 export type IdentificadorCuenta = typeof identificadoresCuenta.$inferSelect;
 export type Categoria = typeof categorias.$inferSelect;
 export type Transaccion = typeof transacciones.$inferSelect;
@@ -736,6 +737,32 @@ export async function editarCuotasPagadas(compraCuotaId: number, nuevoTotal: num
     .update(comprasCuotas)
     .set({ cuotasPagadas: nuevaBase, ...(nuevoComercio ? { comercio: nuevoComercio } : {}) })
     .where(eq(comprasCuotas.id, compraCuotaId));
+}
+
+export async function listarTarjetas() {
+  return db.select().from(tarjetas).orderBy(asc(tarjetas.nombre));
+}
+
+export interface NuevaCompraCuotas {
+  tarjetaId: number;
+  comercio: string;
+  montoTotal: number;
+  totalCuotas: number;
+  fechaCompra: string;
+}
+
+/** Alta manual de una compra en cuotas — para cuando no llegó (o no llega) el correo del banco. */
+export async function crearCompraCuotas(input: NuevaCompraCuotas): Promise<void> {
+  const montoCuota = Math.round((input.montoTotal / input.totalCuotas) * 100) / 100;
+  await db.insert(comprasCuotas).values({
+    tarjetaId: input.tarjetaId,
+    comercio: input.comercio,
+    montoTotal: input.montoTotal,
+    montoCuota,
+    totalCuotas: input.totalCuotas,
+    cuotasPagadas: 0,
+    fechaCompra: input.fechaCompra,
+  });
 }
 
 export interface MetaCompraConProgreso {
