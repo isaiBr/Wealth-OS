@@ -8,6 +8,7 @@ import {
   cuentas,
   deudasManuales,
   fondoEmergencia,
+  identificadoresCuenta,
   metasCompra,
   pagosCuota,
   reglasCategorizacion,
@@ -18,6 +19,7 @@ import {
 } from "./schema";
 
 export type Cuenta = typeof cuentas.$inferSelect;
+export type IdentificadorCuenta = typeof identificadoresCuenta.$inferSelect;
 export type Categoria = typeof categorias.$inferSelect;
 export type Transaccion = typeof transacciones.$inferSelect;
 export type Cobranza = typeof cobranzas.$inferSelect;
@@ -516,6 +518,34 @@ export async function actualizarBilletera(cuentaId: number, billetera: "yape" | 
 
 export async function renombrarCuenta(cuentaId: number, nombre: string) {
   await db.update(cuentas).set({ nombre }).where(eq(cuentas.id, cuentaId));
+}
+
+export async function listarIdentificadoresCuenta() {
+  return db.select().from(identificadoresCuenta).orderBy(asc(identificadoresCuenta.id));
+}
+
+// Un identificador (los 4 dígitos que trae un correo del banco) apunta a una
+// sola cuenta — la unicidad es global, no por cuenta (ver schema.ts), así
+// que se valida a mano antes de insertar para dar un mensaje claro en vez
+// de dejar que reviente el índice único.
+export async function agregarIdentificadorCuenta(cuentaId: number, ultimosDigitos: string) {
+  const existente = await db
+    .select()
+    .from(identificadoresCuenta)
+    .where(eq(identificadoresCuenta.ultimosDigitos, ultimosDigitos))
+    .get();
+  if (existente) {
+    throw new Error(
+      existente.cuentaId === cuentaId
+        ? "Esos dígitos ya están asignados a esta cuenta"
+        : "Esos dígitos ya están asignados a otra cuenta"
+    );
+  }
+  await db.insert(identificadoresCuenta).values({ cuentaId, ultimosDigitos });
+}
+
+export async function eliminarIdentificadorCuenta(id: number) {
+  await db.delete(identificadoresCuenta).where(eq(identificadoresCuenta.id, id));
 }
 
 /**

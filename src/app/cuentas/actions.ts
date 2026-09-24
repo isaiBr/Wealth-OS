@@ -7,6 +7,8 @@ import {
   actualizarBilletera,
   renombrarCuenta,
   ajustarSaldoCuenta,
+  agregarIdentificadorCuenta,
+  eliminarIdentificadorCuenta,
   configurarFondoEmergencia,
   crearCobranza,
   editarCobranza,
@@ -58,6 +60,19 @@ export async function editarCuentaAction(formData: FormData) {
   revalidatePath("/cuentas");
   revalidatePath("/movimientos");
   revalidatePath("/");
+}
+
+export async function agregarIdentificadorAction(cuentaId: number, ultimosDigitos: string) {
+  if (Number.isNaN(cuentaId) || !/^\d{4}$/.test(ultimosDigitos)) {
+    throw new Error("Los últimos dígitos deben ser 4 números");
+  }
+  await agregarIdentificadorCuenta(cuentaId, ultimosDigitos);
+  revalidatePath("/cuentas");
+}
+
+export async function eliminarIdentificadorAction(id: number) {
+  await eliminarIdentificadorCuenta(id);
+  revalidatePath("/cuentas");
 }
 
 export async function ajustarSaldoCuentaAction(formData: FormData) {

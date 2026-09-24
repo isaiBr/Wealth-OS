@@ -3,6 +3,7 @@ import {
   listarCobranzas,
   listarCuentas,
   listarDeudasManuales,
+  listarIdentificadoresCuenta,
   obtenerFondoEmergencia,
   saldoCuenta,
 } from "@/db/queries";
@@ -31,6 +32,11 @@ export default async function CuentasPage() {
   const deudas = await deudaPendiente();
   const cobranzas = await listarCobranzas();
   const deudasManuales = await listarDeudasManuales();
+  const identificadores = await listarIdentificadoresCuenta();
+  const identificadoresPorCuenta: Record<number, { id: number; ultimosDigitos: string }[]> = {};
+  for (const idf of identificadores) {
+    (identificadoresPorCuenta[idf.cuentaId] ??= []).push({ id: idf.id, ultimosDigitos: idf.ultimosDigitos });
+  }
 
   return (
     <div className="screen">
@@ -50,7 +56,7 @@ export default async function CuentasPage() {
         <div className="dashboard-grid">
           <div className="col-main">
             <TabPanel tabKey="cuentas">
-              <CuentasView cuentas={cuentasConSaldo} />
+              <CuentasView cuentas={cuentasConSaldo} identificadoresPorCuenta={identificadoresPorCuenta} />
             </TabPanel>
           </div>
           <div className="col-side">

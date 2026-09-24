@@ -2,7 +2,14 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
-import { crearCuentaAction, alternarDestacadaAction, editarCuentaAction, ajustarSaldoCuentaAction } from "./actions";
+import {
+  crearCuentaAction,
+  alternarDestacadaAction,
+  editarCuentaAction,
+  ajustarSaldoCuentaAction,
+  agregarIdentificadorAction,
+  eliminarIdentificadorAction,
+} from "./actions";
 
 interface CuentaConSaldo {
   id: number;
@@ -14,11 +21,26 @@ interface CuentaConSaldo {
   billetera: string | null;
 }
 
-export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
+interface Identificador {
+  id: number;
+  ultimosDigitos: string;
+}
+
+export function CuentasView({
+  cuentas,
+  identificadoresPorCuenta,
+}: {
+  cuentas: CuentaConSaldo[];
+  identificadoresPorCuenta: Record<number, Identificador[]>;
+}) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [editandoCuenta, setEditandoCuenta] = useState<CuentaConSaldo | null>(null);
   const [corrigiendoSaldo, setCorrigiendoSaldo] = useState(false);
+  const [nuevoDigitos, setNuevoDigitos] = useState("");
+  const [guardandoDigitos, setGuardandoDigitos] = useState(false);
+  const [errorDigitos, setErrorDigitos] = useState<string | null>(null);
+  const [eliminandoDigitosId, setEliminandoDigitosId] = useState<number | null>(null);
 
   async function handleSubmit(formData: FormData) {
     setGuardando(true);
@@ -54,6 +76,31 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
   function cerrarModalEdicion() {
     setEditandoCuenta(null);
     setCorrigiendoSaldo(false);
+    setNuevoDigitos("");
+    setErrorDigitos(null);
+  }
+
+  async function handleAgregarDigitos() {
+    if (!editandoCuenta) return;
+    setErrorDigitos(null);
+    setGuardandoDigitos(true);
+    try {
+      await agregarIdentificadorAction(editandoCuenta.id, nuevoDigitos);
+      setNuevoDigitos("");
+    } catch (e) {
+      setErrorDigitos(e instanceof Error ? e.message : "No se pudo agregar");
+    } finally {
+      setGuardandoDigitos(false);
+    }
+  }
+
+  async function handleEliminarDigitos(id: number) {
+    setEliminandoDigitosId(id);
+    try {
+      await eliminarIdentificadorAction(id);
+    } finally {
+      setEliminandoDigitosId(null);
+    }
   }
 
   return (
@@ -175,6 +222,50 @@ export function CuentasView({ cuentas }: { cuentas: CuentaConSaldo[] }) {
                 <option value="yape">Yape</option>
                 <option value="plin">Plin</option>
               </select>
+            </div>
+            <div className="field">
+              <label>Últimos dígitos (para identificar transacciones de correos)</label>
+              {(identificadoresPorCuenta[editandoCuenta.id] ?? []).map((idf) => (
+                <div key={idf.id} style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6 }}>
+                  <span className="tabular" style={{ fontSize: 13.5 }}>
+                    •••• {idf.ultimosDigitos}
+                  </span>
+                  <button
+                    type="button"
+                    className="edit-btn"
+                    aria-label={`Quitar dígitos ${idf.ultimosDigitos}`}
+                    title="Quitar"
+                    disabled={eliminandoDigitosId === idf.id}
+                    onClick={() => handleEliminarDigitos(idf.id)}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+              <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={4}
+                  placeholder="1234"
+                  aria-label="Nuevos últimos dígitos"
+                  value={nuevoDigitos}
+                  onChange={(e) => setNuevoDigitos(e.target.value.replace(/\D/g, "").slice(0, 4))}
+                  onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+                  style={{ width: 90 }}
+                />
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  disabled={nuevoDigitos.length !== 4 || guardandoDigitos}
+                  onClick={handleAgregarDigitos}
+                >
+                  {guardandoDigitos ? "Agregando..." : "+ Agregar"}
+                </button>
+              </div>
+              {errorDigitos && (
+                <p style={{ color: "var(--danger)", fontSize: 12, marginTop: 6 }}>{errorDigitos}</p>
+              )}
             </div>
             <button
               type="button"
