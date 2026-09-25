@@ -177,7 +177,11 @@ export const transaccionesTags = sqliteTable(
 // pagada") en vez de un solo contador de por vida sin historial.
 export const comprasCuotas = sqliteTable("compras_cuotas", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  tarjetaId: integer("tarjeta_id").references(() => tarjetas.id).notNull(),
+  // Ya no se elige tarjeta al crear una cuota (pasó a ser un tracker 100%
+  // manual, desconectado de cuentas/tarjetas) — se deja nullable en vez de
+  // borrar la columna para no perder el vínculo de las compras viejas que sí
+  // estaban ligadas a una tarjeta.
+  tarjetaId: integer("tarjeta_id").references(() => tarjetas.id),
   transaccionOrigenId: integer("transaccion_origen_id").references(() => transacciones.id),
   comercio: text("comercio").notNull(),
   montoTotal: real("monto_total").notNull(),
@@ -185,6 +189,12 @@ export const comprasCuotas = sqliteTable("compras_cuotas", {
   totalCuotas: integer("total_cuotas").notNull(),
   cuotasPagadas: integer("cuotas_pagadas").notNull().default(0),
   fechaCompra: text("fecha_compra").notNull(),
+  // Día del mes (1-31) en que vence el pago — reemplaza fechaCompra para
+  // calcular la próxima fecha de vencimiento (se calcula en vivo: día X de
+  // este mes, o del que viene si ya pasó). Nullable porque las compras viejas
+  // no lo tienen cargado; fechaCompra se mantiene tal cual para "cuándo se
+  // hizo la compra".
+  diaPago: integer("dia_pago"),
   // Campo viejo, ya no se escribe (reemplazado por pagosCuota) — se deja sin
   // borrar para no perder el dato histórico que ya tenía.
   ultimoPagoMes: text("ultimo_pago_mes"),
@@ -212,22 +222,27 @@ export const pagosCuota = sqliteTable(
 // "aportar" era registrar un movimiento con esa categoría. Se descartó:
 // forzaba una transacción bancaria por algo que muchas veces es solo "ya
 // aparté esta plata", y de paso inflaba el bucket "Ahorro" del Plan de
-// gasto consciente con compras puntuales que no son ahorro real. Las metas
-// nuevas usan `montoAhorrado` (editable a mano) y `categoriaId` null; las
-// metas viejas conservan su categoría y siguen derivando el progreso de ahí
-// (ver listarMetasCompra en queries.ts) — no se migran datos históricos.
+// gasto consciente con compras puntuales que no son ahorro real.
+// Fase 8+: se terminó de cortar — TODA meta usa `montoAhorrado` (editable a
+// mano, también se puede sumar desde "¿esto cubre algo?" del formulario de
+// movimiento). El progreso de las metas viejas se migró una única vez a
+// montoAhorrado (ver scripts/backfill-metas-monto-ahorrado.ts) antes de
+// cortar la lógica que lo derivaba en vivo.
 export const metasCompra = sqliteTable("metas_compra", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   nombre: text("nombre").notNull(),
   precioObjetivo: real("precio_objetivo").notNull(),
   fechaDeseada: text("fecha_deseada"), // "YYYY-MM-DD", opcional
-  metodoPago: text("metodo_pago").notNull(), // 'contado' | 'cuotas' | 'cobranzas'
+  metodoPago: text("metodo_pago").notNull(), // 'contado' | 'cobranzas' — 'cuotas' ya no se ofrece (ver datos viejos abajo)
+  // Legado — ya no se usa para calcular progreso (ver comentario arriba).
+  // Se deja sin borrar porque las metas viejas la tienen asignada y archivar
+  // la categoría al eliminar una meta sigue leyendo esta columna.
   categoriaId: integer("categoria_id").references(() => categorias.id),
-  // Si metodoPago='cuotas' y ya se concretó la compra, se vincula acá — el
-  // progreso pasa a leerse de comprasCuotas en vez de la categoría.
+  // Legado — método de pago 'cuotas' ya no se ofrece; puede seguir poblada
+  // en metas viejas pero no se lee para calcular progreso.
   compraCuotaId: integer("compra_cuota_id").references(() => comprasCuotas.id),
   estado: text("estado").notNull().default("activa"), // 'activa' | 'completada' | 'cancelada'
-  // Aporte manual a la meta — solo lo usan las metas nuevas (categoriaId null).
+  // Único campo de progreso — toda meta (nueva o vieja) lo usa.
   montoAhorrado: real("monto_ahorrado").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
