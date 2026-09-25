@@ -123,6 +123,31 @@ button {
   }
 }
 
+/* ---------- loading.tsx: fallback de navegación entre pantallas ---------- */
+.route-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 96px 0;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+.route-loading-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-strong);
+  animation: route-loading-spin 0.7s linear infinite;
+}
+@keyframes route-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .screen-head {
   margin-bottom: 18px;
 }
