@@ -13,18 +13,24 @@ interface TabPillsGroupProps {
   tabs: Tab[];
   ariaLabel: string;
   children: ReactNode;
-  // Contenido opcional pegado al borde derecho de la fila de pills (visible
-  // en mobile y desktop, a diferencia de las pills que se ocultan en desktop).
+  // Contenido opcional pegado al borde derecho de la fila de pills.
   extra?: ReactNode;
+  // Tab con la que arrancar (ej. desde un link de Inicio con ?tab=extras) —
+  // si no es una key válida de `tabs`, se ignora y arranca en la primera.
+  initialTab?: string;
 }
 
 /**
- * Submenú de pills que agrupa paneles complementarios de una pantalla.
- * En mobile (<900px) solo se ve el panel activo; en desktop las pills se
- * ocultan vía CSS y todos los paneles se muestran a la vez (ver globals.css).
+ * Primer nivel de navegación de una pantalla — TODAS las secciones de esa
+ * pantalla son tabs acá (no se reparten entre col-main/col-side: eso llevaba
+ * a una columna vacía cuando la otra tenía el tab activo). Real en todos los
+ * tamaños: solo se ve el panel activo, mobile y desktop por igual. Ancho
+ * limitado en desktop (ver .tab-pills-group en globals.css) para que un
+ * panel angosto (ej. una lista de cuentas) no quede estirado a todo el ancho.
  */
-export function TabPillsGroup({ tabs, ariaLabel, children, extra }: TabPillsGroupProps) {
-  const [active, setActive] = useState(tabs[0]?.key ?? "");
+export function TabPillsGroup({ tabs, ariaLabel, children, extra, initialTab }: TabPillsGroupProps) {
+  const inicial = initialTab && tabs.some((t) => t.key === initialTab) ? initialTab : (tabs[0]?.key ?? "");
+  const [active, setActive] = useState(inicial);
 
   const nav = (
     <nav className="tab-pills" aria-label={ariaLabel}>
@@ -43,15 +49,17 @@ export function TabPillsGroup({ tabs, ariaLabel, children, extra }: TabPillsGrou
 
   return (
     <TabPillsContext.Provider value={{ active, setActive }}>
-      {extra ? (
-        <div className="tab-pills-row">
-          {nav}
-          {extra}
-        </div>
-      ) : (
-        nav
-      )}
-      {children}
+      <div className="tab-pills-group">
+        {extra ? (
+          <div className="tab-pills-row">
+            {nav}
+            {extra}
+          </div>
+        ) : (
+          nav
+        )}
+        {children}
+      </div>
     </TabPillsContext.Provider>
   );
 }

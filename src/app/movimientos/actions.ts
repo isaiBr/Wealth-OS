@@ -12,6 +12,10 @@ import {
   tagsPorTransaccion,
   alternarTagDeTransaccion,
   crearTag,
+  alternarPagoCuotaMes,
+  marcarDeudaManualPagada,
+  marcarCobranzaCobrada,
+  sumarMontoAhorradoMeta,
   type Tag,
   type FiltrosMovimientos,
 } from "@/db/queries";
@@ -52,12 +56,42 @@ function leerCampos(formData: FormData) {
   return { cuentaId, tipo, monto, comercio, categoriaId, excluida, fecha: `${fechaInput}T${horaActualPeru()}` };
 }
 
+// "¿Esto cubre algo?" — atajo del formulario de movimiento que dispara las
+// mismas acciones que ya existen a mano en cada pantalla (marcar cuota(s)
+// pagada(s), deuda pagada, cobranza cobrada, o sumar a una meta). No se
+// guarda ningún vínculo relacional nuevo: el selector siempre arranca en
+// "No" (ver TransaccionForm), así que solo dispara cuando el usuario lo
+// elige a propósito en esta guardada puntual — no re-dispara solo por
+// reabrir el formulario de edición.
+function leerCobertura(formData: FormData) {
+  const tipo = String(formData.get("cubreTipo") ?? "no");
+  const cuotaIds = formData.getAll("cuotaIds").map((v) => Number(v)).filter((n) => !Number.isNaN(n));
+  const deudaId = formData.get("deudaId") ? Number(formData.get("deudaId")) : null;
+  const cobranzaId = formData.get("cobranzaId") ? Number(formData.get("cobranzaId")) : null;
+  const metaId = formData.get("metaId") ? Number(formData.get("metaId")) : null;
+  return { tipo, cuotaIds, deudaId, cobranzaId, metaId };
+}
+
+async function aplicarCobertura(cobertura: ReturnType<typeof leerCobertura>, monto: number, fecha: string) {
+  const mes = fecha.slice(0, 7);
+  if (cobertura.tipo === "cuota") {
+    for (const id of cobertura.cuotaIds) await alternarPagoCuotaMes(id, mes, true);
+  } else if (cobertura.tipo === "deuda" && cobertura.deudaId !== null) {
+    await marcarDeudaManualPagada(cobertura.deudaId, true);
+  } else if (cobertura.tipo === "cobranza" && cobertura.cobranzaId !== null) {
+    await marcarCobranzaCobrada(cobertura.cobranzaId, true);
+  } else if (cobertura.tipo === "meta" && cobertura.metaId !== null) {
+    await sumarMontoAhorradoMeta(cobertura.metaId, monto);
+  }
+}
+
 export async function crearTransaccionAction(formData: FormData) {
   const campos = leerCampos(formData);
   if (campos.tipo !== "compra" && campos.tipo !== "ingreso") {
     throw new Error("Un gasto manual solo puede ser 'compra' o 'ingreso'");
   }
   await crearTransaccionManual({ ...campos, tipo: campos.tipo });
+  await aplicarCobertura(leerCobertura(formData), campos.monto, campos.fecha);
 
   // Aprendizaje: guardar regla de categorización si se asignó una categoría
   // (salvo que el usuario lo haya apagado en Configuración)
@@ -67,6 +101,8 @@ export async function crearTransaccionAction(formData: FormData) {
   }
 
   revalidatePath("/movimientos");
+  revalidatePath("/presupuesto");
+  revalidatePath("/cuentas");
   revalidatePath("/");
 }
 
@@ -88,6 +124,7 @@ export async function actualizarTransaccionAction(formData: FormData) {
   }
 
   await actualizarTransaccion({ id, ...campos });
+  await aplicarCobertura(leerCobertura(formData), campos.monto, campos.fecha);
 
   // Aprendizaje: guardar regla de categorización si se asignó una categoría
   // (salvo que el usuario lo haya apagado en Configuración)
@@ -100,6 +137,8 @@ export async function actualizarTransaccionAction(formData: FormData) {
   }
 
   revalidatePath("/movimientos");
+  revalidatePath("/presupuesto");
+  revalidatePath("/cuentas");
   revalidatePath("/");
 }
 

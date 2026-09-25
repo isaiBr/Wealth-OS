@@ -31,12 +31,22 @@ export async function crearCuentaAction(formData: FormData) {
   const banco = String(formData.get("banco") ?? "").trim();
   const tipo = String(formData.get("tipo") ?? "").trim();
   const saldoInicial = parseFloat(String(formData.get("saldoInicial") ?? "0"));
+  const valorBilletera = String(formData.get("billetera") ?? "");
+  const billetera = valorBilletera === "yape" || valorBilletera === "plin" ? valorBilletera : null;
+  const incluirEnLiquidas = formData.get("incluirEnLiquidas") === "on";
+  const ultimosDigitos = String(formData.get("ultimosDigitos") ?? "").trim();
 
   if (!nombre || !banco || !tipo || Number.isNaN(saldoInicial)) {
     throw new Error("Datos de cuenta incompletos");
   }
+  if (ultimosDigitos && !/^\d{4}$/.test(ultimosDigitos)) {
+    throw new Error("Los últimos dígitos deben ser 4 números");
+  }
 
-  await crearCuenta({ nombre, banco, tipo, saldoInicial });
+  const cuentaId = await crearCuenta({ nombre, banco, tipo, saldoInicial, billetera, incluirEnLiquidas });
+  if (ultimosDigitos) {
+    await agregarIdentificadorCuenta(cuentaId, ultimosDigitos);
+  }
   revalidatePath("/cuentas");
   revalidatePath("/movimientos");
   revalidatePath("/");

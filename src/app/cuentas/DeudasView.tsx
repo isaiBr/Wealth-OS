@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { RowMenu } from "@/components/RowMenu";
+import { ICONO_TACHO } from "@/components/icons";
 import {
   crearDeudaManualAction,
   editarMontoDeudaManualAction,
@@ -13,6 +15,7 @@ import {
 import type { DeudaManual, DeudaPendiente } from "@/db/queries";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const POR_PAGINA = 10;
 
 interface Props {
   deudasTarjeta: DeudaPendiente[];
@@ -26,12 +29,19 @@ export function DeudasView({ deudasTarjeta, deudasManuales }: Props) {
   const [guardando, setGuardando] = useState(false);
   const [procesandoId, setProcesandoId] = useState<string | null>(null);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState<DeudaManual | null>(null);
+  const [vista, setVista] = useState<"pendientes" | "historial">("pendientes");
+  const [pagina, setPagina] = useState(1);
 
   const manualesPendientes = deudasManuales.filter((d) => d.estado === "pendiente");
   const manualesPagadas = deudasManuales.filter((d) => d.estado === "pagada");
-  const totalPendiente =
-    deudasTarjeta.reduce((acc, d) => acc + d.saldo, 0) + manualesPendientes.reduce((acc, d) => acc + d.montoAdeudado, 0);
-  const sinDeudas = deudasTarjeta.length === 0 && manualesPendientes.length === 0;
+  const totalManualesPendiente = manualesPendientes.reduce((acc, d) => acc + d.montoAdeudado, 0);
+  const totalPaginas = Math.max(1, Math.ceil(manualesPagadas.length / POR_PAGINA));
+  const pagadasPagina = manualesPagadas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
+  function cambiarVista(v: "pendientes" | "historial") {
+    setVista(v);
+    setPagina(1);
+  }
 
   async function handleCrear(formData: FormData) {
     setGuardando(true);
@@ -97,145 +107,166 @@ export function DeudasView({ deudasTarjeta, deudasManuales }: Props) {
           + Agregar deuda
         </button>
       </div>
-      <div className="card debt-card">
-        {sinDeudas ? (
-          <p className="empty-note">Sin deudas pendientes.</p>
-        ) : (
-          <>
-            {deudasTarjeta.map((d, i) => (
-              <div
-                key={`t-${d.cuenta.id}`}
-                style={i > 0 ? { marginTop: 16, paddingTop: 16, borderTop: "1px dashed var(--border)" } : undefined}
-              >
-                <div className="debt-head">
-                  <span className="debt-name">{d.cuenta.nombre}</span>
-                </div>
-                <div className="debt-bar-track">
-                  <div className="debt-bar-fill" style={{ width: "100%" }} />
-                </div>
-                <div className="debt-meta">
-                  <span>Pendiente</span>
-                  <span className="row-right">
-                    <span className="tabular">S/ {FORMATO.format(d.saldo)}</span>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Corregir deuda de ${d.cuenta.nombre}`}
-                      title="Corregir monto"
-                      onClick={() => setEditandoTarjeta(d)}
-                    >
-                      ✎
-                    </button>
-                  </span>
-                </div>
-                {d.fechaVencimiento && (
-                  <div className="debt-due">
-                    Próximo pago: <b>{d.fechaVencimiento}</b>
-                  </div>
-                )}
+      {deudasTarjeta.length > 0 && (
+        <div className="card debt-card" style={{ marginBottom: 14 }}>
+          {deudasTarjeta.map((d, i) => (
+            <div
+              key={`t-${d.cuenta.id}`}
+              style={i > 0 ? { marginTop: 16, paddingTop: 16, borderTop: "1px dashed var(--border)" } : undefined}
+            >
+              <div className="debt-head">
+                <span className="debt-name">{d.cuenta.nombre}</span>
               </div>
-            ))}
-            {manualesPendientes.map((d, i) => (
-              <div
-                key={`m-${d.id}`}
-                style={
-                  deudasTarjeta.length > 0 || i > 0
-                    ? { marginTop: 16, paddingTop: 16, borderTop: "1px dashed var(--border)" }
-                    : undefined
-                }
-              >
-                <div className="debt-head">
-                  <span className="debt-name">{d.descripcion}</span>
-                </div>
-                <div className="debt-bar-track">
-                  <div className="debt-bar-fill" style={{ width: "100%" }} />
-                </div>
-                <div className="debt-meta">
-                  <span>Pendiente</span>
-                  <span className="row-right">
-                    <span className="tabular">S/ {FORMATO.format(d.montoAdeudado)}</span>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Corregir monto de ${d.descripcion}`}
-                      title="Corregir monto"
-                      onClick={() => setEditandoManual(d)}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Marcar "${d.descripcion}" como pagada`}
-                      title="Marcar como pagada"
-                      disabled={procesandoId === `m-${d.id}`}
-                      onClick={() => handleToggle(d)}
-                    >
-                      ✓
-                    </button>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Eliminar deuda "${d.descripcion}"`}
-                      title="Eliminar"
-                      disabled={procesandoId === `m-${d.id}`}
-                      onClick={() => setConfirmandoEliminar(d)}
-                    >
-                      ✕
-                    </button>
-                  </span>
-                </div>
+              <div className="debt-bar-track">
+                <div className="debt-bar-fill" style={{ width: "100%" }} />
               </div>
-            ))}
-            <div className="debt-meta" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed var(--border)" }}>
-              <span>Total pendiente</span>
-              <span className="tabular">S/ {FORMATO.format(totalPendiente)}</span>
+              <div className="debt-meta">
+                <span>Pendiente</span>
+                <span className="row-right">
+                  <span className="tabular">S/ {FORMATO.format(d.saldo)}</span>
+                  <button
+                    type="button"
+                    className="edit-btn"
+                    aria-label={`Corregir deuda de ${d.cuenta.nombre}`}
+                    title="Corregir monto"
+                    onClick={() => setEditandoTarjeta(d)}
+                  >
+                    ✎
+                  </button>
+                </span>
+              </div>
+              {d.fechaVencimiento && (
+                <div className="debt-due">
+                  Próximo pago: <b>{d.fechaVencimiento}</b>
+                </div>
+              )}
             </div>
-          </>
-        )}
+          ))}
+        </div>
+      )}
 
-        {manualesPagadas.length > 0 && (
-          <details style={{ marginTop: 14 }}>
-            <summary style={{ fontSize: 11.5, color: "var(--ink-faint)", cursor: "pointer" }}>
-              Ya pagadas ({manualesPagadas.length})
-            </summary>
-            <div style={{ marginTop: 8 }}>
-              {manualesPagadas.map((d) => (
-                <div className="cuenta" key={d.id} style={{ marginTop: 8, opacity: 0.6 }}>
-                  <div className="cuenta-info" style={{ minWidth: 0 }}>
-                    <div className="nombre-cuenta" style={{ color: "var(--ink)", textDecoration: "line-through" }}>
-                      {d.descripcion}
-                    </div>
+      <nav className="subpills" aria-label="Deudas manuales">
+        <button type="button" className={vista === "pendientes" ? "active" : undefined} onClick={() => cambiarVista("pendientes")}>
+          Pendientes
+        </button>
+        <button type="button" className={vista === "historial" ? "active" : undefined} onClick={() => cambiarVista("historial")}>
+          Historial{manualesPagadas.length > 0 && ` (${manualesPagadas.length})`}
+        </button>
+      </nav>
+
+      {vista === "pendientes" && (
+        <div className="card debt-card">
+          {manualesPendientes.length === 0 && deudasTarjeta.length === 0 ? (
+            <p className="empty-note">Sin deudas pendientes.</p>
+          ) : manualesPendientes.length === 0 ? (
+            <p className="empty-note">Sin deudas manuales pendientes.</p>
+          ) : (
+            <>
+              {manualesPendientes.map((d, i) => (
+                <div key={`m-${d.id}`} style={i > 0 ? { marginTop: 16, paddingTop: 16, borderTop: "1px dashed var(--border)" } : undefined}>
+                  <div className="debt-head">
+                    <span className="debt-name">{d.descripcion}</span>
                   </div>
-                  <div className="row-right">
-                    <div className="saldo tabular">S/ {FORMATO.format(d.montoAdeudado)}</div>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Revertir deuda "${d.descripcion}"`}
-                      title="Marcar como pendiente de nuevo"
-                      disabled={procesandoId === `m-${d.id}`}
-                      onClick={() => handleToggle(d)}
-                    >
-                      ↺
-                    </button>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Eliminar deuda "${d.descripcion}"`}
-                      title="Eliminar"
-                      disabled={procesandoId === `m-${d.id}`}
-                      onClick={() => setConfirmandoEliminar(d)}
-                    >
-                      ✕
-                    </button>
+                  <div className="debt-bar-track">
+                    <div className="debt-bar-fill" style={{ width: "100%" }} />
+                  </div>
+                  <div className="debt-meta">
+                    <span>Pendiente</span>
+                    <span className="row-right">
+                      <span className="tabular">S/ {FORMATO.format(d.montoAdeudado)}</span>
+                      <RowMenu
+                        ariaLabel={`Más acciones para ${d.descripcion}`}
+                        actions={[
+                          { label: "Corregir monto", icon: "✎", onClick: () => setEditandoManual(d) },
+                          {
+                            label: "Marcar pagada",
+                            icon: "✓",
+                            disabled: procesandoId === `m-${d.id}`,
+                            onClick: () => handleToggle(d),
+                          },
+                          {
+                            label: "Eliminar",
+                            icon: ICONO_TACHO,
+                            danger: true,
+                            disabled: procesandoId === `m-${d.id}`,
+                            onClick: () => setConfirmandoEliminar(d),
+                          },
+                        ]}
+                      />
+                    </span>
                   </div>
                 </div>
               ))}
-            </div>
-          </details>
-        )}
-      </div>
+              <div className="debt-meta" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed var(--border)" }}>
+                <span>Total pendiente (manuales)</span>
+                <span className="tabular">S/ {FORMATO.format(totalManualesPendiente)}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {vista === "historial" && (
+        <div className="card debt-card">
+          {manualesPagadas.length === 0 ? (
+            <p className="empty-note">Todavía no pagaste ninguna deuda manual.</p>
+          ) : (
+            <>
+              {pagadasPagina.map((d, i) => (
+                <div className="cuenta" key={d.id} style={{ opacity: 0.65, ...(i > 0 ? { marginTop: 8 } : {}) }}>
+                  <div className="cuenta-info" style={{ minWidth: 0 }}>
+                    <button
+                      type="button"
+                      className="tx-merchant"
+                      style={{ color: "var(--ink)", textDecoration: "line-through", textAlign: "left" }}
+                      onClick={() => setEditandoManual(d)}
+                    >
+                      {d.descripcion}
+                    </button>
+                  </div>
+                  <div className="row-right">
+                    <div className="saldo tabular">S/ {FORMATO.format(d.montoAdeudado)}</div>
+                    <RowMenu
+                      ariaLabel={`Más acciones para ${d.descripcion}`}
+                      actions={[
+                        {
+                          label: "Marcar pendiente",
+                          icon: "↺",
+                          disabled: procesandoId === `m-${d.id}`,
+                          onClick: () => handleToggle(d),
+                        },
+                        {
+                          label: "Eliminar",
+                          icon: ICONO_TACHO,
+                          danger: true,
+                          disabled: procesandoId === `m-${d.id}`,
+                          onClick: () => setConfirmandoEliminar(d),
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+              ))}
+              {totalPaginas > 1 && (
+                <div className="pagination">
+                  <button type="button" disabled={pagina === 1} aria-label="Página anterior" onClick={() => setPagina((p) => Math.max(1, p - 1))}>
+                    ‹
+                  </button>
+                  Página {pagina} de {totalPaginas}
+                  <button
+                    type="button"
+                    disabled={pagina === totalPaginas}
+                    aria-label="Página siguiente"
+                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {modalAbierto && (
         <Modal onClose={() => setModalAbierto(false)}>

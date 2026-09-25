@@ -3,11 +3,12 @@
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { RowMenu } from "@/components/RowMenu";
+import { ICONO_TACHO } from "@/components/icons";
 import {
   crearMetaCompraAction,
   editarMetaCompraAction,
   actualizarMontoAhorradoAction,
-  vincularCompraCuotaAMetaAction,
   cambiarEstadoMetaAction,
   eliminarMetaCompraAction,
 } from "./actions";
@@ -16,21 +17,16 @@ import type { MetaCompraConProgreso } from "@/db/queries";
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const FORMATO_FECHA = new Intl.DateTimeFormat("es-PE", { month: "long", year: "numeric" });
 
+// 'cuotas' ya no se ofrece en el selector (ver decisiones Fase 8+) pero se
+// deja el label por si alguna meta vieja todavía lo tiene guardado.
 const METODO_LABEL: Record<string, string> = {
   contado: "Ahorro directo",
   cuotas: "Cuotas de tarjeta",
   cobranzas: "Financiado con cobranzas",
 };
 
-interface CompraCuotaOpcion {
-  id: number;
-  comercio: string;
-  montoTotal: number;
-}
-
 interface Props {
   metas: MetaCompraConProgreso[];
-  comprasCuotas: CompraCuotaOpcion[];
 }
 
 function nombreFecha(fechaISO: string): string {
@@ -39,7 +35,7 @@ function nombreFecha(fechaISO: string): string {
   return nombre.charAt(0).toUpperCase() + nombre.slice(1);
 }
 
-export function MetasCompraView({ metas, comprasCuotas }: Props) {
+export function MetasCompraView({ metas }: Props) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<MetaCompraConProgreso | undefined>(undefined);
   const [guardando, setGuardando] = useState(false);
@@ -70,15 +66,6 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
       setModalAbierto(false);
     } finally {
       setGuardando(false);
-    }
-  }
-
-  async function handleVincular(meta: MetaCompraConProgreso, valor: string) {
-    setProcesandoId(meta.id);
-    try {
-      await vincularCompraCuotaAMetaAction(meta.id, valor === "" ? null : Number(valor));
-    } finally {
-      setProcesandoId(null);
     }
   }
 
@@ -138,40 +125,34 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
                   <span className="cifras">
                     <strong className="tabular">S/ {FORMATO.format(m.progreso)}</strong> / S/ {FORMATO.format(m.precioObjetivo)}
                   </span>
-                  {m.categoriaId === null && m.metodoPago !== "cuotas" && (
-                    <button
-                      className="edit-btn"
-                      type="button"
-                      aria-label={`Actualizar monto ahorrado de ${m.nombre}`}
-                      title="Actualizar monto ahorrado"
-                      onClick={() => setEditandoMonto(m)}
-                    >
-                      ✎
-                    </button>
-                  )}
-                  <button className="edit-btn" type="button" onClick={() => abrirEdicion(m)} aria-label={`Editar meta ${m.nombre}`} title="Editar nombre, precio, fecha y método">
-                    ⚙
-                  </button>
                   <button
                     className="edit-btn"
                     type="button"
-                    aria-label={`Marcar ${m.nombre} como completada`}
-                    title="Marcar como completada"
-                    disabled={procesandoId === m.id}
-                    onClick={() => handleCompletar(m)}
+                    aria-label={`Actualizar monto ahorrado de ${m.nombre}`}
+                    title="Actualizar monto ahorrado"
+                    onClick={() => setEditandoMonto(m)}
                   >
-                    ✓
+                    ✎
                   </button>
-                  <button
-                    className="edit-btn"
-                    type="button"
-                    aria-label={`Eliminar meta ${m.nombre}`}
-                    title="Eliminar"
-                    disabled={procesandoId === m.id}
-                    onClick={() => setConfirmandoEliminar(m)}
-                  >
-                    ✕
-                  </button>
+                  <RowMenu
+                    ariaLabel={`Más acciones para ${m.nombre}`}
+                    actions={[
+                      { label: "Editar meta", icon: "⚙", onClick: () => abrirEdicion(m) },
+                      {
+                        label: "Marcar completada",
+                        icon: "✓",
+                        disabled: procesandoId === m.id,
+                        onClick: () => handleCompletar(m),
+                      },
+                      {
+                        label: "Eliminar",
+                        icon: ICONO_TACHO,
+                        danger: true,
+                        disabled: procesandoId === m.id,
+                        onClick: () => setConfirmandoEliminar(m),
+                      },
+                    ]}
+                  />
                 </span>
               </div>
               <div className="cat-bar-track">
@@ -181,23 +162,6 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
                 {METODO_LABEL[m.metodoPago] ?? m.metodoPago}
                 {m.fechaDeseada && ` · meta: ${nombreFecha(m.fechaDeseada)}`}
               </div>
-              {m.metodoPago === "cuotas" && (
-                <div className="field" style={{ marginTop: 8, marginBottom: 0 }}>
-                  <select
-                    value={m.compraCuotaId ?? ""}
-                    onChange={(e) => handleVincular(m, e.target.value)}
-                    disabled={procesandoId === m.id}
-                    style={{ fontSize: 12 }}
-                  >
-                    <option value="">Sin vincular a ninguna compra todavía</option>
-                    {comprasCuotas.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.comercio} (S/ {FORMATO.format(c.montoTotal)})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
               {m.sugerenciaMensual !== null && m.sugerenciaMensual > 0 && (
                 <div className="cat-flag" style={{ color: "var(--ink-muted)", marginTop: 8 }}>
                   Apartando S/ {FORMATO.format(m.sugerenciaMensual)}/mes la juntás a tiempo para tu fecha objetivo.
@@ -238,7 +202,6 @@ export function MetasCompraView({ metas, comprasCuotas }: Props) {
               <label htmlFor="metodoPago">Método de pago</label>
               <select id="metodoPago" name="metodoPago" defaultValue={editando?.metodoPago ?? "contado"} required>
                 <option value="contado">Ahorro directo</option>
-                <option value="cuotas">Cuotas de tarjeta</option>
                 <option value="cobranzas">Financiado con cobranzas pendientes</option>
               </select>
             </div>

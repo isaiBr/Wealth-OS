@@ -4,7 +4,17 @@ import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { TransaccionForm } from "@/components/TransaccionForm";
 import { obtenerTransaccionesAction, alternarTagAction, crearYAsignarTagAction } from "./actions";
-import type { Cuenta, Categoria, Transaccion, Tag, FiltrosMovimientos } from "@/db/queries";
+import type {
+  Cuenta,
+  Categoria,
+  Transaccion,
+  Tag,
+  FiltrosMovimientos,
+  CuotaActiva,
+  DeudaManual,
+  Cobranza,
+  MetaCompraConProgreso,
+} from "@/db/queries";
 
 interface Props {
   cuentas: Cuenta[];
@@ -14,6 +24,10 @@ interface Props {
   tagsPorTxInicial: Map<number, Tag[]>;
   mes: string;
   filtros?: FiltrosMovimientos;
+  cuotasSinPagar: CuotaActiva[];
+  deudasPendientes: DeudaManual[];
+  cobranzasPendientes: Cobranza[];
+  metas: MetaCompraConProgreso[];
 }
 
 const FORMATO_DIA = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short" });
@@ -35,7 +49,19 @@ function etiquetaDia(fechaISO: string): string {
   return FORMATO_DIA.format(fecha);
 }
 
-export function MovimientosView({ cuentas, categorias, transacciones: inicial, tags, tagsPorTxInicial, mes, filtros }: Props) {
+export function MovimientosView({
+  cuentas,
+  categorias,
+  transacciones: inicial,
+  tags,
+  tagsPorTxInicial,
+  mes,
+  filtros,
+  cuotasSinPagar,
+  deudasPendientes,
+  cobranzasPendientes,
+  metas,
+}: Props) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<Transaccion | undefined>(undefined);
   const [gestionandoId, setGestionandoId] = useState<number | null>(null);
@@ -236,7 +262,16 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
       </div>
 
       {modalAbierto && (
-        <TransaccionForm cuentas={cuentas} categorias={categorias} transaccion={editando} onClose={() => setModalAbierto(false)} />
+        <TransaccionForm
+          cuentas={cuentas}
+          categorias={categorias}
+          transaccion={editando}
+          onClose={() => setModalAbierto(false)}
+          cuotasSinPagar={cuotasSinPagar}
+          deudasPendientes={deudasPendientes}
+          cobranzasPendientes={cobranzasPendientes}
+          metas={metas}
+        />
       )}
 
       {gestionando && (

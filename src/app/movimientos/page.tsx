@@ -1,6 +1,10 @@
 import {
+  cuotasActivas,
   listarCategorias,
+  listarCobranzas,
   listarCuentas,
+  listarDeudasManuales,
+  listarMetasCompra,
   listarTags,
   resumenMes,
   tagsPorTransaccion,
@@ -17,7 +21,7 @@ import { normalizarMes } from "@/logic/mes";
 export const dynamic = "force-dynamic";
 
 interface Props {
-  searchParams: Promise<{ mes?: string; categoriaId?: string; tagId?: string; q?: string }>;
+  searchParams: Promise<{ mes?: string; categoriaId?: string; tagId?: string; q?: string; tab?: string }>;
 }
 
 export default async function MovimientosPage({ searchParams }: Props) {
@@ -29,14 +33,24 @@ export default async function MovimientosPage({ searchParams }: Props) {
     texto: params.q || undefined,
   };
 
-  const [cuentas, categorias, transacciones, resumen, tags] = await Promise.all([
+  const [cuentas, categorias, transacciones, resumen, tags, { filas: cuotas }, deudas, cobranzas, metas] = await Promise.all([
     listarCuentas(),
     listarCategorias(),
     transaccionesDelMes(mes, 50, 0, filtros),
     resumenMes(mes),
     listarTags(),
+    cuotasActivas(),
+    listarDeudasManuales(),
+    listarCobranzas(),
+    listarMetasCompra(),
   ]);
   const tagsPorTx = await tagsPorTransaccion(transacciones.map((t) => t.id));
+
+  // Solo lo que tiene sentido ofrecer como "esto cubre algo": cuotas del mes
+  // que todavía no se marcaron pagadas, y deudas/cobranzas pendientes.
+  const cuotasSinPagar = cuotas.filter((c) => !c.pagadaEsteMes);
+  const deudasPendientes = deudas.filter((d) => d.estado === "pendiente");
+  const cobranzasPendientes = cobranzas.filter((c) => c.estado === "pendiente");
 
   return (
     <div className="screen">
@@ -55,48 +69,47 @@ export default async function MovimientosPage({ searchParams }: Props) {
             { key: "lista", label: "Movimientos" },
             { key: "resumen", label: "Resumen" },
           ]}
+          initialTab={params.tab}
           extra={<FiltrosToggleBoton />}
         >
-          <div className="dashboard-grid">
-            <div className="col-main">
-              <TabPanel tabKey="lista">
-                <FiltrosToggleContenido>
-                  <MovimientosFiltros categorias={categorias} tags={tags} />
-                </FiltrosToggleContenido>
-                <MovimientosView
-                  cuentas={cuentas}
-                  categorias={categorias}
-                  transacciones={transacciones}
-                  tags={tags}
-                  tagsPorTxInicial={tagsPorTx}
-                  mes={mes}
-                  filtros={filtros}
-                />
-              </TabPanel>
-            </div>
+          <TabPanel tabKey="lista">
+            <FiltrosToggleContenido>
+              <MovimientosFiltros categorias={categorias} tags={tags} />
+            </FiltrosToggleContenido>
+            <MovimientosView
+              cuentas={cuentas}
+              categorias={categorias}
+              transacciones={transacciones}
+              tags={tags}
+              tagsPorTxInicial={tagsPorTx}
+              mes={mes}
+              filtros={filtros}
+              cuotasSinPagar={cuotasSinPagar}
+              deudasPendientes={deudasPendientes}
+              cobranzasPendientes={cobranzasPendientes}
+              metas={metas}
+            />
+          </TabPanel>
 
-            <div className="col-side">
-              <TabPanel tabKey="resumen">
-                <div className="section-head">
-                  <div className="section-title">Resumen del mes</div>
-                </div>
-                <div className="card" style={{ padding: "6px 18px" }}>
-                  <div className="summary-row">
-                    <span>Ingresos</span>
-                    <span className="valor tabular income">S/ {resumen.ingresos.toFixed(2)}</span>
-                  </div>
-                  <div className="summary-row">
-                    <span>Gastos</span>
-                    <span className="valor tabular">S/ {resumen.gastos.toFixed(2)}</span>
-                  </div>
-                  <div className="summary-row">
-                    <span>Transferencias internas</span>
-                    <span className="valor tabular">S/ {resumen.transferenciasInternas.toFixed(2)}</span>
-                  </div>
-                </div>
-              </TabPanel>
+          <TabPanel tabKey="resumen">
+            <div className="section-head">
+              <div className="section-title">Resumen del mes</div>
             </div>
-          </div>
+            <div className="card" style={{ padding: "6px 18px" }}>
+              <div className="summary-row">
+                <span>Ingresos</span>
+                <span className="valor tabular income">S/ {resumen.ingresos.toFixed(2)}</span>
+              </div>
+              <div className="summary-row">
+                <span>Gastos</span>
+                <span className="valor tabular">S/ {resumen.gastos.toFixed(2)}</span>
+              </div>
+              <div className="summary-row">
+                <span>Transferencias internas</span>
+                <span className="valor tabular">S/ {resumen.transferenciasInternas.toFixed(2)}</span>
+              </div>
+            </div>
+          </TabPanel>
         </TabPillsGroup>
       </FiltrosToggleProvider>
     </div>

@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { RowMenu } from "@/components/RowMenu";
+import { ICONO_TACHO } from "@/components/icons";
 import { crearCobranzaAction, editarCobranzaAction, marcarCobranzaCobradaAction, eliminarCobranzaAction } from "./actions";
 import type { Cobranza } from "@/db/queries";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const POR_PAGINA = 10;
 
 export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
   const [modalAbierto, setModalAbierto] = useState(false);
@@ -14,10 +17,19 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
   const [guardando, setGuardando] = useState(false);
   const [procesandoId, setProcesandoId] = useState<number | null>(null);
   const [confirmandoEliminar, setConfirmandoEliminar] = useState<Cobranza | null>(null);
+  const [vista, setVista] = useState<"pendientes" | "historial">("pendientes");
+  const [pagina, setPagina] = useState(1);
 
   const pendientes = cobranzas.filter((c) => c.estado === "pendiente");
   const cobradas = cobranzas.filter((c) => c.estado === "cobrado");
   const totalPendiente = pendientes.reduce((acc, c) => acc + c.montoEsperado, 0);
+  const totalPaginas = Math.max(1, Math.ceil(cobradas.length / POR_PAGINA));
+  const cobradasPagina = cobradas.slice((pagina - 1) * POR_PAGINA, pagina * POR_PAGINA);
+
+  function cambiarVista(v: "pendientes" | "historial") {
+    setVista(v);
+    setPagina(1);
+  }
 
   async function handleSubmit(formData: FormData) {
     setGuardando(true);
@@ -67,103 +79,133 @@ export function CobranzasView({ cobranzas }: { cobranzas: Cobranza[] }) {
         </button>
       </div>
 
-      <div className="card debt-card">
-        {pendientes.length === 0 ? (
-          <p className="empty-note">Sin cobranzas pendientes.</p>
-        ) : (
-          <>
-            {pendientes.map((c, i) => (
-              <div
-                key={c.id}
-                className="cuenta"
-                style={i > 0 ? { marginTop: 8 } : undefined}
-              >
-                <div className="cuenta-info" style={{ minWidth: 0 }}>
-                  <button
-                    type="button"
-                    className="tx-merchant"
-                    style={{ color: "var(--ink)", textAlign: "left" }}
-                    onClick={() => setEditando(c)}
-                  >
-                    {c.descripcion}
-                  </button>
-                </div>
-                <div className="row-right">
-                  <div className="saldo tabular" style={{ color: "var(--accent-strong)" }}>
-                    S/ {FORMATO.format(c.montoEsperado)}
-                  </div>
-                  <button
-                    type="button"
-                    className="edit-btn"
-                    aria-label={`Marcar "${c.descripcion}" como cobrada`}
-                    title="Marcar como cobrada"
-                    disabled={procesandoId === c.id}
-                    onClick={() => handleToggle(c)}
-                  >
-                    ✓
-                  </button>
-                  <button
-                    type="button"
-                    className="edit-btn"
-                    aria-label={`Eliminar cobranza "${c.descripcion}"`}
-                    title="Eliminar"
-                    disabled={procesandoId === c.id}
-                    onClick={() => setConfirmandoEliminar(c)}
-                  >
-                    ✕
-                  </button>
-                </div>
-              </div>
-            ))}
-            <div className="debt-meta" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed var(--border)" }}>
-              <span>Total pendiente</span>
-              <span className="tabular">S/ {FORMATO.format(totalPendiente)}</span>
-            </div>
-          </>
-        )}
+      <nav className="subpills" aria-label="Cobranzas">
+        <button type="button" className={vista === "pendientes" ? "active" : undefined} onClick={() => cambiarVista("pendientes")}>
+          Pendientes
+        </button>
+        <button type="button" className={vista === "historial" ? "active" : undefined} onClick={() => cambiarVista("historial")}>
+          Historial{cobradas.length > 0 && ` (${cobradas.length})`}
+        </button>
+      </nav>
 
-        {cobradas.length > 0 && (
-          <details style={{ marginTop: 14 }}>
-            <summary style={{ fontSize: 11.5, color: "var(--ink-faint)", cursor: "pointer" }}>
-              Ya cobradas ({cobradas.length})
-            </summary>
-            <div style={{ marginTop: 8 }}>
-              {cobradas.map((c) => (
-                <div className="cuenta" key={c.id} style={{ marginTop: 8, opacity: 0.6 }}>
+      {vista === "pendientes" && (
+        <div className="card debt-card">
+          {pendientes.length === 0 ? (
+            <p className="empty-note">Sin cobranzas pendientes.</p>
+          ) : (
+            <>
+              {pendientes.map((c, i) => (
+                <div key={c.id} className="cuenta" style={i > 0 ? { marginTop: 8 } : undefined}>
                   <div className="cuenta-info" style={{ minWidth: 0 }}>
-                    <div className="nombre-cuenta" style={{ color: "var(--ink)", textDecoration: "line-through" }}>
+                    <button
+                      type="button"
+                      className="tx-merchant"
+                      style={{ color: "var(--ink)", textAlign: "left" }}
+                      onClick={() => setEditando(c)}
+                    >
                       {c.descripcion}
-                    </div>
+                    </button>
                   </div>
                   <div className="row-right">
-                    <div className="saldo tabular">S/ {FORMATO.format(c.montoEsperado)}</div>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Revertir cobranza "${c.descripcion}"`}
-                      title="Marcar como pendiente de nuevo"
-                      disabled={procesandoId === c.id}
-                      onClick={() => handleToggle(c)}
-                    >
-                      ↺
-                    </button>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Eliminar cobranza "${c.descripcion}"`}
-                      title="Eliminar"
-                      disabled={procesandoId === c.id}
-                      onClick={() => setConfirmandoEliminar(c)}
-                    >
-                      ✕
-                    </button>
+                    <div className="saldo tabular" style={{ color: "var(--accent-strong)" }}>
+                      S/ {FORMATO.format(c.montoEsperado)}
+                    </div>
+                    <RowMenu
+                      ariaLabel={`Más acciones para ${c.descripcion}`}
+                      actions={[
+                        {
+                          label: "Marcar cobrada",
+                          icon: "✓",
+                          disabled: procesandoId === c.id,
+                          onClick: () => handleToggle(c),
+                        },
+                        {
+                          label: "Eliminar",
+                          icon: ICONO_TACHO,
+                          danger: true,
+                          disabled: procesandoId === c.id,
+                          onClick: () => setConfirmandoEliminar(c),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
               ))}
-            </div>
-          </details>
-        )}
-      </div>
+              <div className="debt-meta" style={{ marginTop: 12, paddingTop: 12, borderTop: "1px dashed var(--border)" }}>
+                <span>Total pendiente</span>
+                <span className="tabular">S/ {FORMATO.format(totalPendiente)}</span>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+
+      {vista === "historial" && (
+        <div className="card debt-card">
+          {cobradas.length === 0 ? (
+            <p className="empty-note">Todavía no cobraste ninguna.</p>
+          ) : (
+            <>
+              {cobradasPagina.map((c, i) => (
+                <div key={c.id} className="cuenta" style={{ opacity: 0.65, ...(i > 0 ? { marginTop: 8 } : {}) }}>
+                  <div className="cuenta-info" style={{ minWidth: 0 }}>
+                    <button
+                      type="button"
+                      className="tx-merchant"
+                      style={{ color: "var(--ink)", textDecoration: "line-through", textAlign: "left" }}
+                      onClick={() => setEditando(c)}
+                    >
+                      {c.descripcion}
+                    </button>
+                  </div>
+                  <div className="row-right">
+                    <div className="saldo tabular">S/ {FORMATO.format(c.montoEsperado)}</div>
+                    <RowMenu
+                      ariaLabel={`Más acciones para ${c.descripcion}`}
+                      actions={[
+                        {
+                          label: "Marcar pendiente",
+                          icon: "↺",
+                          disabled: procesandoId === c.id,
+                          onClick: () => handleToggle(c),
+                        },
+                        {
+                          label: "Eliminar",
+                          icon: ICONO_TACHO,
+                          danger: true,
+                          disabled: procesandoId === c.id,
+                          onClick: () => setConfirmandoEliminar(c),
+                        },
+                      ]}
+                    />
+                  </div>
+                </div>
+              ))}
+              {totalPaginas > 1 && (
+                <div className="pagination">
+                  <button
+                    type="button"
+                    disabled={pagina === 1}
+                    aria-label="Página anterior"
+                    onClick={() => setPagina((p) => Math.max(1, p - 1))}
+                  >
+                    ‹
+                  </button>
+                  Página {pagina} de {totalPaginas}
+                  <button
+                    type="button"
+                    disabled={pagina === totalPaginas}
+                    aria-label="Página siguiente"
+                    onClick={() => setPagina((p) => Math.min(totalPaginas, p + 1))}
+                  >
+                    ›
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {modalAbierto && (
         <Modal onClose={() => setModalAbierto(false)}>

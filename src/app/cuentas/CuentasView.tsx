@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { ICONO_TACHO } from "@/components/icons";
 import {
   crearCuentaAction,
   alternarDestacadaAction,
@@ -36,6 +37,7 @@ export function CuentasView({
   identificadoresPorCuenta: Record<number, Identificador[]>;
 }) {
   const [modalAbierto, setModalAbierto] = useState(false);
+  const [tipoNueva, setTipoNueva] = useState("ahorro");
   const [guardando, setGuardando] = useState(false);
   const [editandoCuenta, setEditandoCuenta] = useState<CuentaConSaldo | null>(null);
   const [corrigiendoSaldo, setCorrigiendoSaldo] = useState(false);
@@ -107,11 +109,63 @@ export function CuentasView({
     }
   }
 
+  const cuentasNormales = cuentas.filter((c) => c.tipo !== "tarjeta_credito");
+  const tarjetasCredito = cuentas.filter((c) => c.tipo === "tarjeta_credito");
+
+  function renderCuenta(c: CuentaConSaldo) {
+    return (
+      <div className="cuenta" key={c.id}>
+        <div className="banco">
+          <button
+            type="button"
+            className="edit-btn"
+            aria-pressed={c.destacada}
+            aria-label={c.destacada ? "Quitar de destacadas" : "Marcar como destacada"}
+            title={c.destacada ? "Quitar de destacadas" : "Marcar como destacada"}
+            onClick={() => alternarDestacadaAction(c.id, !c.destacada)}
+            style={{ color: c.destacada ? "var(--accent-strong)" : undefined, borderColor: c.destacada ? "var(--accent-strong)" : undefined }}
+          >
+            {c.destacada ? "★" : "☆"}
+          </button>
+          <span className={`banco-tag tag-${c.banco}`}>{c.banco.slice(0, 3).toUpperCase()}</span>
+          <div className="cuenta-info">
+            <div className="nombre-cuenta">
+              {c.nombre}
+              {c.billetera && <span className={`wallet-tag tag-${c.billetera}`}>{c.billetera === "yape" ? "Yape" : "Plin"}</span>}
+            </div>
+          </div>
+        </div>
+        <div className="row-right">
+          <div className="saldo tabular">S/ {c.saldo.toFixed(2)}</div>
+          <button
+            type="button"
+            className="edit-btn"
+            aria-label={`Editar cuenta ${c.nombre}`}
+            title="Editar nombre y billetera"
+            onClick={() => {
+              setCorrigiendoSaldo(false);
+              setEditandoCuenta(c);
+            }}
+          >
+            ✎
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="toolbar-row">
         <span className="section-title">Cuentas conectadas</span>
-        <button className="btn-add" type="button" onClick={() => setModalAbierto(true)}>
+        <button
+          className="btn-add"
+          type="button"
+          onClick={() => {
+            setTipoNueva("ahorro");
+            setModalAbierto(true);
+          }}
+        >
           + Agregar cuenta
         </button>
       </div>
@@ -119,48 +173,21 @@ export function CuentasView({
         La estrella marca qué cuentas aparecen en el resumen de Inicio.
       </p>
 
-      <div className="cuentas">
-        {cuentas.length === 0 && <p className="empty-note">Todavía no tienes ninguna cuenta registrada.</p>}
-        {cuentas.map((c) => (
-          <div className="cuenta" key={c.id}>
-            <div className="banco">
-              <button
-                type="button"
-                className="edit-btn"
-                aria-pressed={c.destacada}
-                aria-label={c.destacada ? "Quitar de destacadas" : "Marcar como destacada"}
-                title={c.destacada ? "Quitar de destacadas" : "Marcar como destacada"}
-                onClick={() => alternarDestacadaAction(c.id, !c.destacada)}
-                style={{ color: c.destacada ? "var(--accent-strong)" : undefined, borderColor: c.destacada ? "var(--accent-strong)" : undefined }}
-              >
-                {c.destacada ? "★" : "☆"}
-              </button>
-              <span className={`banco-tag tag-${c.banco}`}>{c.banco.slice(0, 3).toUpperCase()}</span>
-              <div className="cuenta-info">
-                <div className="nombre-cuenta">
-                  {c.nombre}
-                  {c.billetera && <span className={`wallet-tag tag-${c.billetera}`}>{c.billetera === "yape" ? "Yape" : "Plin"}</span>}
-                </div>
-              </div>
-            </div>
-            <div className="row-right">
-              <div className="saldo tabular">S/ {c.saldo.toFixed(2)}</div>
-              <button
-                type="button"
-                className="edit-btn"
-                aria-label={`Editar cuenta ${c.nombre}`}
-                title="Editar nombre y billetera"
-                onClick={() => {
-                  setCorrigiendoSaldo(false);
-                  setEditandoCuenta(c);
-                }}
-              >
-                ✎
-              </button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {cuentas.length === 0 && <p className="empty-note">Todavía no tienes ninguna cuenta registrada.</p>}
+
+      {cuentasNormales.length > 0 && (
+        <>
+          <div className="cuentas-subhead">Cuentas</div>
+          <div className="cuentas">{cuentasNormales.map(renderCuenta)}</div>
+        </>
+      )}
+
+      {tarjetasCredito.length > 0 && (
+        <>
+          <div className="cuentas-subhead">Tarjetas de crédito</div>
+          <div className="cuentas">{tarjetasCredito.map(renderCuenta)}</div>
+        </>
+      )}
 
       {modalAbierto && (
         <Modal onClose={() => setModalAbierto(false)}>
@@ -186,7 +213,7 @@ export function CuentasView({
             </div>
             <div className="field">
               <label htmlFor="tipo">Tipo</label>
-              <select id="tipo" name="tipo" required defaultValue="ahorro">
+              <select id="tipo" name="tipo" required value={tipoNueva} onChange={(e) => setTipoNueva(e.target.value)}>
                 <option value="ahorro">Ahorro</option>
                 <option value="corriente">Corriente</option>
                 <option value="tarjeta_credito">Tarjeta de crédito</option>
@@ -196,6 +223,32 @@ export function CuentasView({
               <label htmlFor="saldoInicial">Saldo inicial (S/)</label>
               <input id="saldoInicial" name="saldoInicial" type="number" step="0.01" defaultValue="0" required />
             </div>
+            <div className="field">
+              <label htmlFor="billetera-nueva">Yape/Plin ligado a esta cuenta</label>
+              <select id="billetera-nueva" name="billetera" defaultValue="">
+                <option value="">Ninguna</option>
+                <option value="yape">Yape</option>
+                <option value="plin">Plin</option>
+              </select>
+            </div>
+            <div className="field">
+              <label htmlFor="ultimosDigitos">Últimos 4 dígitos (opcional)</label>
+              <input id="ultimosDigitos" name="ultimosDigitos" type="text" inputMode="numeric" maxLength={4} placeholder="1234" />
+            </div>
+            {tipoNueva !== "tarjeta_credito" && (
+              <div className="field">
+                <div className="cfg-toggle-row">
+                  <div className="cfg-info">
+                    <div className="cfg-nombre">Contar como plata líquida</div>
+                    <div className="cfg-meta">Se suma a &quot;Disponible real&quot; en Inicio</div>
+                  </div>
+                  <label className="switch">
+                    <input type="checkbox" name="incluirEnLiquidas" defaultChecked />
+                    <span className="track" />
+                  </label>
+                </div>
+              </div>
+            )}
             <div className="modal-actions">
               <button type="button" className="btn-secondary" onClick={() => setModalAbierto(false)} disabled={guardando}>
                 Cancelar
@@ -256,7 +309,7 @@ export function CuentasView({
                     disabled={eliminandoDigitosId === idf.id}
                     onClick={() => setConfirmandoDigitos(idf)}
                   >
-                    ✕
+                    {ICONO_TACHO}
                   </button>
                 </div>
               ))}
@@ -274,7 +327,8 @@ export function CuentasView({
                 />
                 <button
                   type="button"
-                  className="btn-secondary"
+                  className="text-link"
+                  style={{ alignSelf: "center" }}
                   disabled={nuevoDigitos.length !== 4 || guardandoDigitos}
                   onClick={handleAgregarDigitos}
                 >

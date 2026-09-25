@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ConfirmModal } from "@/components/ConfirmModal";
+import { ICONO_TACHO } from "@/components/icons";
 import { eliminarReglaAction, actualizarConfiguracionIAAction } from "./actions";
 import type { Categoria, ReglaCategorizacion, ConfiguracionIa } from "@/db/queries";
 
@@ -122,7 +123,7 @@ export function ReglasCategorizacionView({ categorias, reglas, configuracion }: 
                 disabled={procesandoId === r.id}
                 onClick={() => setConfirmandoRegla(r)}
               >
-                ✕
+                {ICONO_TACHO}
               </button>
             </div>
           );

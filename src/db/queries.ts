@@ -94,6 +94,41 @@ export async function archivarCategoria(id: number, archivada: boolean): Promise
   await db.update(categorias).set({ archivada }).where(eq(categorias.id, id));
 }
 
+/**
+ * Solo borra si nadie la referencia — no confiamos en que la FK lo bloquee
+ * sola (ver comentario de eliminarTag: Turso/libSQL no garantiza que
+ * PRAGMA foreign_keys esté activado en la conexión). Si tiene movimientos,
+ * reglas o metas viejas asignadas, tira un error claro en vez de un
+ * "categoria_id" huérfano silencioso — para eso está archivar.
+ */
+export async function eliminarCategoria(id: number): Promise<void> {
+  const [{ n: enTransacciones }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transacciones)
+    .where(eq(transacciones.categoriaId, id));
+  if (enTransacciones > 0) {
+    throw new Error(`No se puede eliminar: tiene ${enTransacciones} movimiento(s) asignado(s). Archívala en vez de eliminarla.`);
+  }
+
+  const [{ n: enReglas }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(reglasCategorizacion)
+    .where(eq(reglasCategorizacion.categoriaId, id));
+  if (enReglas > 0) {
+    throw new Error(`No se puede eliminar: tiene ${enReglas} regla(s) de categorización. Borra esas reglas primero.`);
+  }
+
+  const [{ n: enMetas }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(metasCompra)
+    .where(eq(metasCompra.categoriaId, id));
+  if (enMetas > 0) {
+    throw new Error(`No se puede eliminar: es la categoría legado de ${enMetas} meta(s) de compra vieja(s).`);
+  }
+
+  await db.delete(categorias).where(eq(categorias.id, id));
+}
+
 export async function listarTags() {
   return db.select().from(tags).orderBy(asc(tags.nombre));
 }
@@ -490,10 +525,14 @@ export interface NuevaCuenta {
   banco: string;
   tipo: string;
   saldoInicial: number;
+  billetera?: "yape" | "plin" | null;
+  incluirEnLiquidas?: boolean;
 }
 
-export async function crearCuenta(input: NuevaCuenta) {
-  await db.insert(cuentas).values(input);
+/** Devuelve el id de la cuenta creada — permite encadenar un identificador (últimos dígitos) en el mismo alta. */
+export async function crearCuenta(input: NuevaCuenta): Promise<number> {
+  const [creada] = await db.insert(cuentas).values(input).returning({ id: cuentas.id });
+  return creada.id;
 }
 
 export async function alternarDestacada(cuentaId: number, destacada: boolean) {
@@ -639,9 +678,12 @@ export interface CuotaActiva {
   montoCuota: number;
   totalCuotas: number;
   cuotasPagadasTotal: number; // base histórica + pagos registrados por mes
-  tarjetaNombre: string;
+  tarjetaNombre: string | null; // null en cuotas nuevas — Fase 8+ ya no se liga a tarjeta
   mesActual: string; // "YYYY-MM" — para que la UI arme el label "Mes: pagada/pendiente"
   pagadaEsteMes: boolean;
+  diaPago: number | null; // 1-31, null en cuotas viejas que no lo tienen cargado todavía
+  proximaFechaPago: string | null; // "YYYY-MM-DD" calculada en vivo — día de este mes, o del que viene si ya pasó
+  vencidaEsteMes: boolean; // ya pasó el día de pago de este mes y no se marcó pagada
 }
 
 /**
@@ -652,7 +694,12 @@ export interface CuotaActiva {
  * único que la excluye.
  */
 export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMensual: number }> {
-  const mesActual = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const hoy = new Date();
+  const mesActual = hoy.toISOString().slice(0, 7); // "YYYY-MM"
+  // En UTC, igual que mesActual arriba — mezclar hora local del servidor acá
+  // con el mesActual en UTC podría desalinear "hoy" y "este mes" cerca de la
+  // medianoche.
+  const diaHoy = hoy.getUTCDate();
   const compras = await db
     .select({
       id: comprasCuotas.id,
@@ -660,6 +707,7 @@ export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMens
       montoCuota: comprasCuotas.montoCuota,
       cuotasPagadasBase: comprasCuotas.cuotasPagadas,
       totalCuotas: comprasCuotas.totalCuotas,
+      diaPago: comprasCuotas.diaPago,
       tarjetaNombre: tarjetas.nombre,
     })
     .from(comprasCuotas)
@@ -685,15 +733,31 @@ export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMens
     const cuotasPagadasTotal = c.cuotasPagadasBase + pagos.length;
     if (cuotasPagadasTotal >= c.totalCuotas) continue; // ya terminó de pagarse, no es "activa"
     const pagadaEsteMes = pagos.some((p) => p.mes === mesActual);
+
+    // Próxima fecha de vencimiento en vivo: día X de este mes, o del que
+    // viene si ese día ya pasó — nunca se guarda una fecha fija que se
+    // desactualiza mes a mes (ver diaPago en schema.ts).
+    let proximaFechaPago: string | null = null;
+    let vencidaEsteMes = false;
+    if (c.diaPago !== null) {
+      const vencidaEsteMesSinPagar = diaHoy > c.diaPago && !pagadaEsteMes;
+      vencidaEsteMes = vencidaEsteMesSinPagar;
+      const base = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + (vencidaEsteMesSinPagar ? 1 : 0), c.diaPago));
+      proximaFechaPago = base.toISOString().slice(0, 10);
+    }
+
     filas.push({
       id: c.id,
       comercio: c.comercio,
       montoCuota: c.montoCuota,
       totalCuotas: c.totalCuotas,
       cuotasPagadasTotal,
-      tarjetaNombre: c.tarjetaNombre ?? "—",
+      tarjetaNombre: c.tarjetaNombre,
       mesActual,
       pagadaEsteMes,
+      diaPago: c.diaPago,
+      proximaFechaPago,
+      vencidaEsteMes,
     });
     if (!pagadaEsteMes) totalMensual += c.montoCuota;
   }
@@ -717,38 +781,60 @@ export async function alternarPagoCuotaMes(compraCuotaId: number, mes: string, p
  * para que base + pagos registrados por mes dé el total que se le pasa —
  * los pagos por mes ya registrados no se tocan.
  */
-export async function editarCuotasPagadas(compraCuotaId: number, nuevoTotal: number, nuevoComercio?: string): Promise<void> {
+export async function editarCuotasPagadas(
+  compraCuotaId: number,
+  nuevoTotal: number,
+  nuevoComercio?: string,
+  nuevoDiaPago?: number
+): Promise<void> {
   const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compraCuotaId));
   const nuevaBase = Math.max(0, nuevoTotal - pagos.length);
   await db
     .update(comprasCuotas)
-    .set({ cuotasPagadas: nuevaBase, ...(nuevoComercio ? { comercio: nuevoComercio } : {}) })
+    .set({
+      cuotasPagadas: nuevaBase,
+      ...(nuevoComercio ? { comercio: nuevoComercio } : {}),
+      ...(nuevoDiaPago !== undefined ? { diaPago: nuevoDiaPago } : {}),
+    })
     .where(eq(comprasCuotas.id, compraCuotaId));
 }
 
-export async function listarTarjetas() {
-  return db.select().from(tarjetas).orderBy(asc(tarjetas.nombre));
+/**
+ * Borra una compra en cuotas creada por error. Limpia a mano las filas hijas
+ * en vez de confiar en el ON DELETE CASCADE declarado en el schema — mismo
+ * motivo que eliminarTag: Turso/libSQL no garantiza que PRAGMA foreign_keys
+ * esté activado en la conexión.
+ */
+export async function eliminarCompraCuotas(compraCuotaId: number): Promise<void> {
+  await db.delete(pagosCuota).where(eq(pagosCuota.compraCuotaId, compraCuotaId));
+  // Metas viejas (metodoPago='cuotas', ya no se ofrece) podían quedar
+  // vinculadas acá — se desvincula en vez de dejar un id huérfano.
+  await db.update(metasCompra).set({ compraCuotaId: null }).where(eq(metasCompra.compraCuotaId, compraCuotaId));
+  await db.delete(comprasCuotas).where(eq(comprasCuotas.id, compraCuotaId));
 }
 
 export interface NuevaCompraCuotas {
-  tarjetaId: number;
   comercio: string;
   montoTotal: number;
   totalCuotas: number;
   fechaCompra: string;
+  diaPago: number;
 }
 
-/** Alta manual de una compra en cuotas — para cuando no llegó (o no llega) el correo del banco. */
+/**
+ * Alta manual de una compra en cuotas — tracker 100% manual (Fase 8+), ya no
+ * se elige tarjeta. `diaPago` es lo que activa el aviso de vencimiento.
+ */
 export async function crearCompraCuotas(input: NuevaCompraCuotas): Promise<void> {
   const montoCuota = Math.round((input.montoTotal / input.totalCuotas) * 100) / 100;
   await db.insert(comprasCuotas).values({
-    tarjetaId: input.tarjetaId,
     comercio: input.comercio,
     montoTotal: input.montoTotal,
     montoCuota,
     totalCuotas: input.totalCuotas,
     cuotasPagadas: 0,
     fechaCompra: input.fechaCompra,
+    diaPago: input.diaPago,
   });
 }
 
@@ -782,14 +868,22 @@ export async function editarMetaCompra(id: number, input: NuevaMetaCompra): Prom
   await db.update(metasCompra).set(input).where(eq(metasCompra.id, id));
 }
 
-/** Corrige el monto ahorrado de una meta nueva (sin categoría dedicada) — solo aplica a esas. */
+/** Corrige el monto ahorrado a mano (edición directa del campo, valor absoluto). */
 export async function actualizarMontoAhorradoMeta(id: number, montoAhorrado: number): Promise<void> {
   await db.update(metasCompra).set({ montoAhorrado }).where(eq(metasCompra.id, id));
 }
 
-/** Vincula (o desvincula, con null) una compra en cuotas ya concretada — para método 'cuotas'. */
-export async function vincularCompraCuotaAMeta(id: number, compraCuotaId: number | null): Promise<void> {
-  await db.update(metasCompra).set({ compraCuotaId }).where(eq(metasCompra.id, id));
+/**
+ * Suma (o resta, con delta negativo) al monto ahorrado — usado por "¿esto
+ * cubre algo?" del formulario de movimiento. Incremento atómico en vez de
+ * leer + escribir, para no perder un aporte si dos movimientos se guardan
+ * casi al mismo tiempo.
+ */
+export async function sumarMontoAhorradoMeta(id: number, delta: number): Promise<void> {
+  await db
+    .update(metasCompra)
+    .set({ montoAhorrado: sql`${metasCompra.montoAhorrado} + ${delta}` })
+    .where(eq(metasCompra.id, id));
 }
 
 export async function cambiarEstadoMeta(id: number, estado: "activa" | "completada" | "cancelada"): Promise<void> {
@@ -806,35 +900,13 @@ export async function eliminarMetaCompra(id: number): Promise<void> {
   }
 }
 
-export async function listarComprasCuotas() {
-  return db.select().from(comprasCuotas).orderBy(desc(comprasCuotas.fechaCompra));
-}
-
-/**
- * Progreso: si es 'cuotas' y ya está vinculada a una compra real, se deriva
- * de ahí (cuotas pagadas × monto de cuota). Si tiene categoría dedicada
- * (metas viejas, de antes de Fase 3), se deriva de la suma histórica de
- * movimientos en esa categoría — comportamiento legado, no se migra. Toda
- * meta nueva (categoriaId null) usa `montoAhorrado`, editado a mano.
- */
+/** Progreso: siempre `montoAhorrado` — editado a mano o sumado desde "¿esto cubre algo?" del formulario de movimiento. */
 export async function listarMetasCompra(): Promise<MetaCompraConProgreso[]> {
   const metas = await db.select().from(metasCompra).where(eq(metasCompra.estado, "activa")).orderBy(desc(metasCompra.createdAt));
   const resultado: MetaCompraConProgreso[] = [];
 
   for (const m of metas) {
-    let progreso = 0;
-    if (m.metodoPago === "cuotas" && m.compraCuotaId !== null) {
-      const compra = await db.select().from(comprasCuotas).where(eq(comprasCuotas.id, m.compraCuotaId)).get();
-      if (compra) {
-        const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compra.id));
-        progreso = (compra.cuotasPagadas + pagos.length) * compra.montoCuota;
-      }
-    } else if (m.categoriaId !== null) {
-      const txs = await db.select().from(transacciones).where(eq(transacciones.categoriaId, m.categoriaId));
-      progreso = txs.reduce((acc, t) => acc + (t.esTransferenciaInterna || t.excluida ? 0 : t.monto), 0);
-    } else {
-      progreso = m.montoAhorrado;
-    }
+    const progreso = m.montoAhorrado;
 
     let sugerenciaMensual: number | null = null;
     if (m.fechaDeseada) {

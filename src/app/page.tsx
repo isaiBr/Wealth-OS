@@ -282,7 +282,7 @@ export default async function InicioPage() {
 
       <div className="stats-label">Compromisos recurrentes</div>
       <div className="commit-row">
-        <Link href="/presupuesto" className="commit-chip">
+        <Link href="/presupuesto?tab=extras" className="commit-chip">
           <div className="commit-icon" aria-hidden="true">
             {ICONO_SUSCRIPCIONES}
           </div>
@@ -291,7 +291,7 @@ export default async function InicioPage() {
             <span className="commit-val tabular">S/ {totalSuscripciones.toFixed(2)}</span>
           </div>
         </Link>
-        <Link href="/presupuesto" className="commit-chip">
+        <Link href="/presupuesto?tab=extras" className="commit-chip">
           <div className="commit-icon" aria-hidden="true">
             {ICONO_CUOTAS}
           </div>
@@ -300,7 +300,7 @@ export default async function InicioPage() {
             <span className="commit-val tabular">S/ {totalCuotas.toFixed(2)}</span>
           </div>
         </Link>
-        <Link href="/cuentas" className={`commit-chip${totalDeuda > 0 ? " warn" : ""}`}>
+        <Link href="/cuentas?tab=deudas" className={`commit-chip${totalDeuda > 0 ? " warn" : ""}`}>
           <div className="commit-icon" aria-hidden="true">
             {ICONO_DEUDA}
           </div>
@@ -360,7 +360,7 @@ export default async function InicioPage() {
         <>
           <div className="section-head with-action">
             <div className="section-title">Categorías a vigilar</div>
-            <Link href="/presupuesto" className="text-link">
+            <Link href="/presupuesto?tab=categorias" className="text-link">
               Ver más
             </Link>
           </div>
@@ -378,7 +378,7 @@ export default async function InicioPage() {
                           {` / S/ ${FORMATO.format(categoria.limiteMensual)}`}
                         </>
                       ) : (
-                        <Link href="/presupuesto" className="text-link">
+                        <Link href="/presupuesto?tab=categorias" className="text-link">
                           Configura un límite →
                         </Link>
                       )}
@@ -406,7 +406,7 @@ export default async function InicioPage() {
 
       <div className="section-head with-action">
         <div className="section-title">Plan de gasto consciente</div>
-        <Link href="/presupuesto" className="text-link">
+        <Link href="/presupuesto?tab=plan" className="text-link">
           Ver más
         </Link>
       </div>

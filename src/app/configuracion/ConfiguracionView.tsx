@@ -4,10 +4,13 @@ import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { ConfirmModal } from "@/components/ConfirmModal";
 import { TabPanel } from "@/components/TabPills";
+import { RowMenu } from "@/components/RowMenu";
+import { ICONO_TACHO } from "@/components/icons";
 import {
   crearCategoriaAction,
   editarCategoriaAction,
   archivarCategoriaAction,
+  eliminarCategoriaAction,
   crearTagAction,
   eliminarTagAction,
 } from "./actions";
@@ -24,6 +27,8 @@ export function ConfiguracionView({ categorias, tags }: Props) {
   const [editando, setEditando] = useState<Categoria | undefined>(undefined);
   const [guardando, setGuardando] = useState(false);
   const [procesandoId, setProcesandoId] = useState<number | null>(null);
+  const [confirmandoEliminarCategoria, setConfirmandoEliminarCategoria] = useState<Categoria | null>(null);
+  const [errorEliminarCategoria, setErrorEliminarCategoria] = useState<string | null>(null);
   const [nuevaEtiqueta, setNuevaEtiqueta] = useState("");
   const [guardandoTag, setGuardandoTag] = useState(false);
   const [procesandoTagId, setProcesandoTagId] = useState<number | null>(null);
@@ -58,6 +63,20 @@ export function ConfiguracionView({ categorias, tags }: Props) {
     setProcesandoId(c.id);
     try {
       await archivarCategoriaAction(c.id, !c.archivada);
+    } finally {
+      setProcesandoId(null);
+    }
+  }
+
+  async function handleEliminarCategoria(c: Categoria) {
+    setErrorEliminarCategoria(null);
+    setProcesandoId(c.id);
+    try {
+      await eliminarCategoriaAction(c.id);
+      setConfirmandoEliminarCategoria(null);
+    } catch (e) {
+      setErrorEliminarCategoria(e instanceof Error ? e.message : "No se pudo eliminar");
+      setConfirmandoEliminarCategoria(null);
     } finally {
       setProcesandoId(null);
     }
@@ -99,6 +118,11 @@ export function ConfiguracionView({ categorias, tags }: Props) {
           + Nueva categoría
         </button>
       </div>
+      {errorEliminarCategoria && (
+        <p className="section-sub" style={{ color: "var(--danger)", marginTop: -2, marginBottom: 8 }}>
+          {errorEliminarCategoria}
+        </p>
+      )}
       <div className="card" style={{ padding: "6px 18px" }}>
         {categorias.length === 0 && <p className="empty-note">Todavía no hay categorías.</p>}
         {BUCKETS_ORDEN.map((bucket) => {
@@ -113,10 +137,6 @@ export function ConfiguracionView({ categorias, tags }: Props) {
               {categoriasDelBucket.map((c) => (
                 <div className="cfg-row" key={c.id}>
                   <div className="cfg-left">
-                    <span
-                      className="legend-dot"
-                      style={{ background: c.archivada ? "var(--ink-faint)" : "var(--accent)", opacity: c.archivada ? 0.5 : 1 }}
-                    />
                     <div className="cfg-info">
                       <div className="cfg-nombre">
                         {c.nombre}
@@ -125,25 +145,25 @@ export function ConfiguracionView({ categorias, tags }: Props) {
                     </div>
                   </div>
                   <div className="row-right">
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={`Editar categoría ${c.nombre}`}
-                      title="Editar"
-                      onClick={() => abrirEdicion(c)}
-                    >
-                      ✎
-                    </button>
-                    <button
-                      type="button"
-                      className="edit-btn"
-                      aria-label={c.archivada ? `Desarchivar categoría ${c.nombre}` : `Archivar categoría ${c.nombre}`}
-                      title={c.archivada ? "Desarchivar" : "Archivar"}
-                      disabled={procesandoId === c.id}
-                      onClick={() => handleArchivar(c)}
-                    >
-                      {c.archivada ? "↺" : "⊘"}
-                    </button>
+                    <RowMenu
+                      ariaLabel={`Más acciones para ${c.nombre}`}
+                      actions={[
+                        { label: "Editar", icon: "✎", onClick: () => abrirEdicion(c) },
+                        {
+                          label: c.archivada ? "Desarchivar" : "Archivar",
+                          icon: c.archivada ? "↺" : "⊘",
+                          disabled: procesandoId === c.id,
+                          onClick: () => handleArchivar(c),
+                        },
+                        {
+                          label: "Eliminar",
+                          icon: ICONO_TACHO,
+                          danger: true,
+                          disabled: procesandoId === c.id,
+                          onClick: () => setConfirmandoEliminarCategoria(c),
+                        },
+                      ]}
+                    />
                   </div>
                 </div>
               ))}
@@ -171,7 +191,7 @@ export function ConfiguracionView({ categorias, tags }: Props) {
                 disabled={procesandoTagId === t.id}
                 onClick={() => setConfirmandoTag(t)}
               >
-                ×
+                {ICONO_TACHO}
               </button>
             </span>
           ))}
@@ -230,6 +250,16 @@ export function ConfiguracionView({ categorias, tags }: Props) {
             </div>
           </form>
         </Modal>
+      )}
+
+      {confirmandoEliminarCategoria && (
+        <ConfirmModal
+          titulo={`¿Eliminar categoría "${confirmandoEliminarCategoria.nombre}"?`}
+          mensaje="Solo se puede si no tiene movimientos, reglas ni metas viejas asignadas — si los tiene, archívala en vez de eliminarla."
+          confirmando={procesandoId === confirmandoEliminarCategoria.id}
+          onConfirmar={() => handleEliminarCategoria(confirmandoEliminarCategoria)}
+          onCancelar={() => setConfirmandoEliminarCategoria(null)}
+        />
       )}
 
       {confirmandoTag && (
