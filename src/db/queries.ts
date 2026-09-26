@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, gte, inArray, lt, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, like, lt, sql } from "drizzle-orm";
 import { db } from "./client";
 import {
   categorias,
@@ -8,6 +8,7 @@ import {
   cuentas,
   deudasManuales,
   fondoEmergencia,
+  identificadoresCuenta,
   metasCompra,
   pagosCuota,
   reglasCategorizacion,
@@ -18,6 +19,8 @@ import {
 } from "./schema";
 
 export type Cuenta = typeof cuentas.$inferSelect;
+export type Tarjeta = typeof tarjetas.$inferSelect;
+export type IdentificadorCuenta = typeof identificadoresCuenta.$inferSelect;
 export type Categoria = typeof categorias.$inferSelect;
 export type Transaccion = typeof transacciones.$inferSelect;
 export type Cobranza = typeof cobranzas.$inferSelect;
@@ -32,12 +35,6 @@ export async function listarCuentas() {
 
 export async function listarCategorias() {
   return db.select().from(categorias).orderBy(asc(categorias.nombre));
-}
-
-/** Categorías marcadas `excluirDeGastoReal` (plata que salió pero no es tu gasto real — ver schema.ts). */
-async function idsCategoriasExcluidas(): Promise<Set<number>> {
-  const todas = await listarCategorias();
-  return new Set(todas.filter((c) => c.excluirDeGastoReal).map((c) => c.id));
 }
 
 function normalizarPatron(comercio: string): string {
@@ -97,6 +94,41 @@ export async function archivarCategoria(id: number, archivada: boolean): Promise
   await db.update(categorias).set({ archivada }).where(eq(categorias.id, id));
 }
 
+/**
+ * Solo borra si nadie la referencia — no confiamos en que la FK lo bloquee
+ * sola (ver comentario de eliminarTag: Turso/libSQL no garantiza que
+ * PRAGMA foreign_keys esté activado en la conexión). Si tiene movimientos,
+ * reglas o metas viejas asignadas, tira un error claro en vez de un
+ * "categoria_id" huérfano silencioso — para eso está archivar.
+ */
+export async function eliminarCategoria(id: number): Promise<void> {
+  const [{ n: enTransacciones }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(transacciones)
+    .where(eq(transacciones.categoriaId, id));
+  if (enTransacciones > 0) {
+    throw new Error(`No se puede eliminar: tiene ${enTransacciones} movimiento(s) asignado(s). Archívala en vez de eliminarla.`);
+  }
+
+  const [{ n: enReglas }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(reglasCategorizacion)
+    .where(eq(reglasCategorizacion.categoriaId, id));
+  if (enReglas > 0) {
+    throw new Error(`No se puede eliminar: tiene ${enReglas} regla(s) de categorización. Borra esas reglas primero.`);
+  }
+
+  const [{ n: enMetas }] = await db
+    .select({ n: sql<number>`count(*)` })
+    .from(metasCompra)
+    .where(eq(metasCompra.categoriaId, id));
+  if (enMetas > 0) {
+    throw new Error(`No se puede eliminar: es la categoría legado de ${enMetas} meta(s) de compra vieja(s).`);
+  }
+
+  await db.delete(categorias).where(eq(categorias.id, id));
+}
+
 export async function listarTags() {
   return db.select().from(tags).orderBy(asc(tags.nombre));
 }
@@ -145,11 +177,6 @@ export async function alternarTagDeTransaccion(transaccionId: number, tagId: num
   }
 }
 
-/** Prende/apaga "sin contabilizar" en una transacción — mismo picker rápido, sin pasar por el form completo. */
-export async function alternarExcluida(transaccionId: number, excluida: boolean): Promise<void> {
-  await db.update(transacciones).set({ excluida }).where(eq(transacciones.id, transaccionId));
-}
-
 function signo(tipo: string): 1 | -1 {
   return tipo === "ingreso" || tipo === "devolucion" || tipo === "ajuste" ? 1 : -1;
 }
@@ -196,16 +223,48 @@ function rangoMes(mes: string): { desde: string; hasta: string } {
   return { desde, hasta: `${siguiente}-01` };
 }
 
+export interface FiltrosMovimientos {
+  categoriaId?: number;
+  tagId?: number;
+  texto?: string;
+}
+
 // `limit` es opcional a propósito: la vista paginada de Movimientos lo pasa
 // explícitamente, pero el resto de funciones (resumenMes, presupuestoPorCategoria,
 // ejecutarMotorTransferencias) necesitan SIEMPRE el mes completo para que los
 // totales no queden truncados — nunca deben depender del valor por defecto.
-export async function transaccionesDelMes(mes: string, limit?: number, offset: number = 0) {
+// `filtros` solo lo usa la lista de Movimientos (para acotar qué se ve, no
+// para cambiar ningún total) — el resto de llamadas lo omite.
+export async function transaccionesDelMes(
+  mes: string,
+  limit?: number,
+  offset: number = 0,
+  filtros?: FiltrosMovimientos
+) {
   const { desde, hasta } = rangoMes(mes);
+  const condiciones = [gte(transacciones.fecha, desde), lt(transacciones.fecha, hasta)];
+
+  if (filtros?.categoriaId !== undefined) {
+    condiciones.push(eq(transacciones.categoriaId, filtros.categoriaId));
+  }
+  if (filtros?.texto) {
+    condiciones.push(like(transacciones.comercio, `%${filtros.texto}%`));
+  }
+  if (filtros?.tagId !== undefined) {
+    const filas = await db
+      .select({ transaccionId: transaccionesTags.transaccionId })
+      .from(transaccionesTags)
+      .where(eq(transaccionesTags.tagId, filtros.tagId));
+    const ids = filas.map((f) => f.transaccionId);
+    // Sin coincidencias: forzar un resultado vacío en vez de dejar el filtro
+    // sin efecto (inArray con array vacío no filtra nada en drizzle/sqlite).
+    condiciones.push(ids.length > 0 ? inArray(transacciones.id, ids) : sql`0`);
+  }
+
   const query = db
     .select()
     .from(transacciones)
-    .where(and(gte(transacciones.fecha, desde), lt(transacciones.fecha, hasta)))
+    .where(and(...condiciones))
     .orderBy(desc(transacciones.fecha));
   return limit !== undefined ? query.limit(limit).offset(offset) : query;
 }
@@ -214,9 +273,13 @@ export async function obtenerTransaccion(id: number) {
   return db.select().from(transacciones).where(eq(transacciones.id, id)).get();
 }
 
+/** Las etiquetas de la transacción se borran solas (cascade en transacciones_tags). */
+export async function eliminarTransaccion(id: number): Promise<void> {
+  await db.delete(transacciones).where(eq(transacciones.id, id));
+}
+
 export async function resumenMes(mes: string) {
   const txs = await transaccionesDelMes(mes);
-  const excluidas = await idsCategoriasExcluidas();
   let ingresos = 0;
   let gastos = 0;
   let transferenciasInternas = 0;
@@ -232,10 +295,6 @@ export async function resumenMes(mes: string) {
       ingresos += t.monto;
       continue;
     }
-    // excluirDeGastoReal es "no cuenta como gasto real" (transferencias entre
-    // billeteras propias, pruebas, etc.) — no debe aplicarse a ingresos, solo
-    // llegamos acá para los tipos que sí son gasto/devolución.
-    if (t.categoriaId !== null && excluidas.has(t.categoriaId)) continue;
     if (t.tipo === "devolucion") {
       // No es un ingreso real ni un gasto nuevo — reduce el gasto que ya se
       // había contado (o lo deja en 0 si la compra original no está en el
@@ -271,7 +330,6 @@ export async function presupuestoPorCategoria(mes: string): Promise<{
 }> {
   const todasCategorias = await listarCategorias();
   const txs = await transaccionesDelMes(mes);
-  const excluidas = await idsCategoriasExcluidas();
 
   // Una devolución no trae categoría propia (no es un gasto nuevo) — para
   // que la suma por categoría cuadre con el total, se resta de la misma
@@ -297,7 +355,6 @@ export async function presupuestoPorCategoria(mes: string): Promise<{
       if (signo > 0) sinCategorizar += t.monto;
       continue;
     }
-    if (excluidas.has(categoriaId)) continue;
     gastoPorCategoria.set(categoriaId, (gastoPorCategoria.get(categoriaId) ?? 0) + signo * t.monto);
   }
 
@@ -468,10 +525,14 @@ export interface NuevaCuenta {
   banco: string;
   tipo: string;
   saldoInicial: number;
+  billetera?: "yape" | "plin" | null;
+  incluirEnLiquidas?: boolean;
 }
 
-export async function crearCuenta(input: NuevaCuenta) {
-  await db.insert(cuentas).values(input);
+/** Devuelve el id de la cuenta creada — permite encadenar un identificador (últimos dígitos) en el mismo alta. */
+export async function crearCuenta(input: NuevaCuenta): Promise<number> {
+  const [creada] = await db.insert(cuentas).values(input).returning({ id: cuentas.id });
+  return creada.id;
 }
 
 export async function alternarDestacada(cuentaId: number, destacada: boolean) {
@@ -482,8 +543,40 @@ export async function actualizarBilletera(cuentaId: number, billetera: "yape" | 
   await db.update(cuentas).set({ billetera }).where(eq(cuentas.id, cuentaId));
 }
 
+export async function actualizarIncluirEnLiquidas(cuentaId: number, incluir: boolean) {
+  await db.update(cuentas).set({ incluirEnLiquidas: incluir }).where(eq(cuentas.id, cuentaId));
+}
+
 export async function renombrarCuenta(cuentaId: number, nombre: string) {
   await db.update(cuentas).set({ nombre }).where(eq(cuentas.id, cuentaId));
+}
+
+export async function listarIdentificadoresCuenta() {
+  return db.select().from(identificadoresCuenta).orderBy(asc(identificadoresCuenta.id));
+}
+
+// Un identificador (los 4 dígitos que trae un correo del banco) apunta a una
+// sola cuenta — la unicidad es global, no por cuenta (ver schema.ts), así
+// que se valida a mano antes de insertar para dar un mensaje claro en vez
+// de dejar que reviente el índice único.
+export async function agregarIdentificadorCuenta(cuentaId: number, ultimosDigitos: string) {
+  const existente = await db
+    .select()
+    .from(identificadoresCuenta)
+    .where(eq(identificadoresCuenta.ultimosDigitos, ultimosDigitos))
+    .get();
+  if (existente) {
+    throw new Error(
+      existente.cuentaId === cuentaId
+        ? "Esos dígitos ya están asignados a esta cuenta"
+        : "Esos dígitos ya están asignados a otra cuenta"
+    );
+  }
+  await db.insert(identificadoresCuenta).values({ cuentaId, ultimosDigitos });
+}
+
+export async function eliminarIdentificadorCuenta(id: number) {
+  await db.delete(identificadoresCuenta).where(eq(identificadoresCuenta.id, id));
 }
 
 /**
@@ -585,9 +678,12 @@ export interface CuotaActiva {
   montoCuota: number;
   totalCuotas: number;
   cuotasPagadasTotal: number; // base histórica + pagos registrados por mes
-  tarjetaNombre: string;
+  tarjetaNombre: string | null; // null en cuotas nuevas — Fase 8+ ya no se liga a tarjeta
   mesActual: string; // "YYYY-MM" — para que la UI arme el label "Mes: pagada/pendiente"
   pagadaEsteMes: boolean;
+  diaPago: number | null; // 1-31, null en cuotas viejas que no lo tienen cargado todavía
+  proximaFechaPago: string | null; // "YYYY-MM-DD" calculada en vivo — día de este mes, o del que viene si ya pasó
+  vencidaEsteMes: boolean; // ya pasó el día de pago de este mes y no se marcó pagada
 }
 
 /**
@@ -598,7 +694,12 @@ export interface CuotaActiva {
  * único que la excluye.
  */
 export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMensual: number }> {
-  const mesActual = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const hoy = new Date();
+  const mesActual = hoy.toISOString().slice(0, 7); // "YYYY-MM"
+  // En UTC, igual que mesActual arriba — mezclar hora local del servidor acá
+  // con el mesActual en UTC podría desalinear "hoy" y "este mes" cerca de la
+  // medianoche.
+  const diaHoy = hoy.getUTCDate();
   const compras = await db
     .select({
       id: comprasCuotas.id,
@@ -606,6 +707,7 @@ export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMens
       montoCuota: comprasCuotas.montoCuota,
       cuotasPagadasBase: comprasCuotas.cuotasPagadas,
       totalCuotas: comprasCuotas.totalCuotas,
+      diaPago: comprasCuotas.diaPago,
       tarjetaNombre: tarjetas.nombre,
     })
     .from(comprasCuotas)
@@ -631,15 +733,31 @@ export async function cuotasActivas(): Promise<{ filas: CuotaActiva[]; totalMens
     const cuotasPagadasTotal = c.cuotasPagadasBase + pagos.length;
     if (cuotasPagadasTotal >= c.totalCuotas) continue; // ya terminó de pagarse, no es "activa"
     const pagadaEsteMes = pagos.some((p) => p.mes === mesActual);
+
+    // Próxima fecha de vencimiento en vivo: día X de este mes, o del que
+    // viene si ese día ya pasó — nunca se guarda una fecha fija que se
+    // desactualiza mes a mes (ver diaPago en schema.ts).
+    let proximaFechaPago: string | null = null;
+    let vencidaEsteMes = false;
+    if (c.diaPago !== null) {
+      const vencidaEsteMesSinPagar = diaHoy > c.diaPago && !pagadaEsteMes;
+      vencidaEsteMes = vencidaEsteMesSinPagar;
+      const base = new Date(Date.UTC(hoy.getUTCFullYear(), hoy.getUTCMonth() + (vencidaEsteMesSinPagar ? 1 : 0), c.diaPago));
+      proximaFechaPago = base.toISOString().slice(0, 10);
+    }
+
     filas.push({
       id: c.id,
       comercio: c.comercio,
       montoCuota: c.montoCuota,
       totalCuotas: c.totalCuotas,
       cuotasPagadasTotal,
-      tarjetaNombre: c.tarjetaNombre ?? "—",
+      tarjetaNombre: c.tarjetaNombre,
       mesActual,
       pagadaEsteMes,
+      diaPago: c.diaPago,
+      proximaFechaPago,
+      vencidaEsteMes,
     });
     if (!pagadaEsteMes) totalMensual += c.montoCuota;
   }
@@ -663,13 +781,61 @@ export async function alternarPagoCuotaMes(compraCuotaId: number, mes: string, p
  * para que base + pagos registrados por mes dé el total que se le pasa —
  * los pagos por mes ya registrados no se tocan.
  */
-export async function editarCuotasPagadas(compraCuotaId: number, nuevoTotal: number, nuevoComercio?: string): Promise<void> {
+export async function editarCuotasPagadas(
+  compraCuotaId: number,
+  nuevoTotal: number,
+  nuevoComercio?: string,
+  nuevoDiaPago?: number
+): Promise<void> {
   const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compraCuotaId));
   const nuevaBase = Math.max(0, nuevoTotal - pagos.length);
   await db
     .update(comprasCuotas)
-    .set({ cuotasPagadas: nuevaBase, ...(nuevoComercio ? { comercio: nuevoComercio } : {}) })
+    .set({
+      cuotasPagadas: nuevaBase,
+      ...(nuevoComercio ? { comercio: nuevoComercio } : {}),
+      ...(nuevoDiaPago !== undefined ? { diaPago: nuevoDiaPago } : {}),
+    })
     .where(eq(comprasCuotas.id, compraCuotaId));
+}
+
+/**
+ * Borra una compra en cuotas creada por error. Limpia a mano las filas hijas
+ * en vez de confiar en el ON DELETE CASCADE declarado en el schema — mismo
+ * motivo que eliminarTag: Turso/libSQL no garantiza que PRAGMA foreign_keys
+ * esté activado en la conexión.
+ */
+export async function eliminarCompraCuotas(compraCuotaId: number): Promise<void> {
+  await db.delete(pagosCuota).where(eq(pagosCuota.compraCuotaId, compraCuotaId));
+  // Metas viejas (metodoPago='cuotas', ya no se ofrece) podían quedar
+  // vinculadas acá — se desvincula en vez de dejar un id huérfano.
+  await db.update(metasCompra).set({ compraCuotaId: null }).where(eq(metasCompra.compraCuotaId, compraCuotaId));
+  await db.delete(comprasCuotas).where(eq(comprasCuotas.id, compraCuotaId));
+}
+
+export interface NuevaCompraCuotas {
+  comercio: string;
+  montoTotal: number;
+  totalCuotas: number;
+  fechaCompra: string;
+  diaPago: number;
+}
+
+/**
+ * Alta manual de una compra en cuotas — tracker 100% manual (Fase 8+), ya no
+ * se elige tarjeta. `diaPago` es lo que activa el aviso de vencimiento.
+ */
+export async function crearCompraCuotas(input: NuevaCompraCuotas): Promise<void> {
+  const montoCuota = Math.round((input.montoTotal / input.totalCuotas) * 100) / 100;
+  await db.insert(comprasCuotas).values({
+    comercio: input.comercio,
+    montoTotal: input.montoTotal,
+    montoCuota,
+    totalCuotas: input.totalCuotas,
+    cuotasPagadas: 0,
+    fechaCompra: input.fechaCompra,
+    diaPago: input.diaPago,
+  });
 }
 
 export interface MetaCompraConProgreso {
@@ -679,8 +845,9 @@ export interface MetaCompraConProgreso {
   fechaDeseada: string | null;
   metodoPago: string;
   estado: string;
-  categoriaId: number;
+  categoriaId: number | null;
   compraCuotaId: number | null;
+  montoAhorrado: number;
   progreso: number;
   sugerenciaMensual: number | null;
 }
@@ -692,67 +859,54 @@ export interface NuevaMetaCompra {
   metodoPago: string;
 }
 
-/**
- * Crea la meta Y su categoría dedicada (bucket 'ahorro') en el mismo paso —
- * esa categoría es la que trackea el progreso, nunca un número aparte (ver
- * comentario en schema.ts, mismo principio que fondoEmergencia).
- */
+/** El progreso se lleva a mano en `montoAhorrado` (ver comentario en schema.ts) — sin categoría autogenerada. */
 export async function crearMetaCompra(input: NuevaMetaCompra): Promise<void> {
-  const [categoria] = await db
-    .insert(categorias)
-    .values({ nombre: `Meta: ${input.nombre}`, bucket: "ahorro" })
-    .returning({ id: categorias.id });
-  await db.insert(metasCompra).values({ ...input, categoriaId: categoria.id });
+  await db.insert(metasCompra).values(input);
 }
 
 export async function editarMetaCompra(id: number, input: NuevaMetaCompra): Promise<void> {
   await db.update(metasCompra).set(input).where(eq(metasCompra.id, id));
 }
 
-/** Vincula (o desvincula, con null) una compra en cuotas ya concretada — para método 'cuotas'. */
-export async function vincularCompraCuotaAMeta(id: number, compraCuotaId: number | null): Promise<void> {
-  await db.update(metasCompra).set({ compraCuotaId }).where(eq(metasCompra.id, id));
+/** Corrige el monto ahorrado a mano (edición directa del campo, valor absoluto). */
+export async function actualizarMontoAhorradoMeta(id: number, montoAhorrado: number): Promise<void> {
+  await db.update(metasCompra).set({ montoAhorrado }).where(eq(metasCompra.id, id));
+}
+
+/**
+ * Suma (o resta, con delta negativo) al monto ahorrado — usado por "¿esto
+ * cubre algo?" del formulario de movimiento. Incremento atómico en vez de
+ * leer + escribir, para no perder un aporte si dos movimientos se guardan
+ * casi al mismo tiempo.
+ */
+export async function sumarMontoAhorradoMeta(id: number, delta: number): Promise<void> {
+  await db
+    .update(metasCompra)
+    .set({ montoAhorrado: sql`${metasCompra.montoAhorrado} + ${delta}` })
+    .where(eq(metasCompra.id, id));
 }
 
 export async function cambiarEstadoMeta(id: number, estado: "activa" | "completada" | "cancelada"): Promise<void> {
   await db.update(metasCompra).set({ estado }).where(eq(metasCompra.id, id));
 }
 
-/** Borra la meta pero archiva (no borra) su categoría — así los movimientos ya categorizados ahí no pierden el nombre. */
+/** Borra la meta; si es una meta vieja con categoría dedicada, la archiva (no borra) para no perder el nombre de los movimientos ya categorizados ahí. */
 export async function eliminarMetaCompra(id: number): Promise<void> {
   const meta = await db.select().from(metasCompra).where(eq(metasCompra.id, id)).get();
   if (!meta) return;
   await db.delete(metasCompra).where(eq(metasCompra.id, id));
-  await db.update(categorias).set({ archivada: true }).where(eq(categorias.id, meta.categoriaId));
+  if (meta.categoriaId !== null) {
+    await db.update(categorias).set({ archivada: true }).where(eq(categorias.id, meta.categoriaId));
+  }
 }
 
-export async function listarComprasCuotas() {
-  return db.select().from(comprasCuotas).orderBy(desc(comprasCuotas.fechaCompra));
-}
-
-/**
- * Progreso: si es 'cuotas' y ya está vinculada a una compra real, se deriva
- * de ahí (cuotas pagadas × monto de cuota). Si no, se deriva de la suma
- * histórica (todo el tiempo, no solo el mes) de movimientos en la categoría
- * dedicada — "aportar a la meta" es simplemente registrar un movimiento con
- * esa categoría, como cualquier otro.
- */
+/** Progreso: siempre `montoAhorrado` — editado a mano o sumado desde "¿esto cubre algo?" del formulario de movimiento. */
 export async function listarMetasCompra(): Promise<MetaCompraConProgreso[]> {
   const metas = await db.select().from(metasCompra).where(eq(metasCompra.estado, "activa")).orderBy(desc(metasCompra.createdAt));
   const resultado: MetaCompraConProgreso[] = [];
 
   for (const m of metas) {
-    let progreso = 0;
-    if (m.metodoPago === "cuotas" && m.compraCuotaId !== null) {
-      const compra = await db.select().from(comprasCuotas).where(eq(comprasCuotas.id, m.compraCuotaId)).get();
-      if (compra) {
-        const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compra.id));
-        progreso = (compra.cuotasPagadas + pagos.length) * compra.montoCuota;
-      }
-    } else {
-      const txs = await db.select().from(transacciones).where(eq(transacciones.categoriaId, m.categoriaId));
-      progreso = txs.reduce((acc, t) => acc + (t.esTransferenciaInterna || t.excluida ? 0 : t.monto), 0);
-    }
+    const progreso = m.montoAhorrado;
 
     let sugerenciaMensual: number | null = null;
     if (m.fechaDeseada) {
@@ -800,11 +954,9 @@ export async function gastoHormigaAnualizado(mes: string): Promise<GastoHormiga>
 
   const todasCategorias = await listarCategorias();
   const categoriaPorId = new Map(todasCategorias.map((c) => [c.id, c]));
-  const excluidas = await idsCategoriasExcluidas();
-  const filasContables = filas.filter((f) => f.categoriaId === null || !excluidas.has(f.categoriaId));
 
   const porCategoriaMap = new Map<string, number>();
-  for (const f of filasContables) {
+  for (const f of filas) {
     const nombre = (f.categoriaId && categoriaPorId.get(f.categoriaId)?.nombre) || "Sin categoría";
     porCategoriaMap.set(nombre, (porCategoriaMap.get(nombre) ?? 0) + f.monto);
   }
@@ -812,7 +964,7 @@ export async function gastoHormigaAnualizado(mes: string): Promise<GastoHormiga>
     .map(([nombre, monto]) => ({ nombre, monto }))
     .sort((a, b) => b.monto - a.monto);
 
-  const totalMes = filasContables.reduce((acc, f) => acc + f.monto, 0);
+  const totalMes = filas.reduce((acc, f) => acc + f.monto, 0);
   return { porCategoria, totalMes, proyeccionAnual: totalMes * 12 };
 }
 

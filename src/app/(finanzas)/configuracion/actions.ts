@@ -5,6 +5,7 @@ import {
   crearCategoria,
   editarCategoria,
   archivarCategoria,
+  eliminarCategoria,
   eliminarReglaCategorizacion,
   crearTag,
   eliminarTag,
@@ -38,6 +39,11 @@ export async function editarCategoriaAction(formData: FormData) {
 
 export async function archivarCategoriaAction(id: number, archivada: boolean) {
   await archivarCategoria(id, archivada);
+  revalidarTodo();
+}
+
+export async function eliminarCategoriaAction(id: number) {
+  await eliminarCategoria(id);
   revalidarTodo();
 }
 

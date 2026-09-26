@@ -16,6 +16,12 @@ export const cuentas = sqliteTable("cuentas", {
   // debe mostrar las 8 cuentas si el usuario solo usa 2-3 en el día a día.
   // La lista completa de todas formas vive en la pestaña Cuentas.
   destacada: integer("destacada", { mode: "boolean" }).notNull().default(false),
+  // Si cuenta para "disponible real" (Inicio) como plata líquida. Antes esto
+  // era implícito por tipo (todo lo que no es tarjeta_credito), pero hay
+  // cuentas de ahorro/corriente que tampoco son "plata disponible hoy" (ej.
+  // una cuenta de inversión, una compartida). Tarjeta de crédito sigue
+  // excluida siempre, sin importar este flag — es deuda, no plata propia.
+  incluirEnLiquidas: integer("incluir_en_liquidas", { mode: "boolean" }).notNull().default(true),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 
@@ -46,12 +52,6 @@ export const categorias = sqliteTable("categorias", {
   bucket: text("bucket").notNull(), // 'fijos' | 'inversion' | 'ahorro' | 'libre'
   limiteMensual: real("limite_mensual"),
   usaPromedioMovil: integer("usa_promedio_movil", { mode: "boolean" }).notNull().default(false),
-  // Para dinero que sale de tus cuentas pero no es "tu" gasto real (alguien
-  // más te lo paga/devuelve fuera de la app, plata que solo pasó por ti,
-  // pruebas). Se sigue viendo en Movimientos y en el saldo de la cuenta
-  // (la plata sí salió), pero se excluye de los totales de gasto real
-  // (resumen del mes, presupuesto por categoría, gasto hormiga).
-  excluirDeGastoReal: integer("excluir_de_gasto_real", { mode: "boolean" }).notNull().default(false),
   // Ocultarla de los selectores de categoría (Movimientos) sin borrarla ni
   // tocar los movimientos históricos que ya la tienen asignada.
   archivada: integer("archivada", { mode: "boolean" }).notNull().default(false),
@@ -177,7 +177,11 @@ export const transaccionesTags = sqliteTable(
 // pagada") en vez de un solo contador de por vida sin historial.
 export const comprasCuotas = sqliteTable("compras_cuotas", {
   id: integer("id").primaryKey({ autoIncrement: true }),
-  tarjetaId: integer("tarjeta_id").references(() => tarjetas.id).notNull(),
+  // Ya no se elige tarjeta al crear una cuota (pasó a ser un tracker 100%
+  // manual, desconectado de cuentas/tarjetas) — se deja nullable en vez de
+  // borrar la columna para no perder el vínculo de las compras viejas que sí
+  // estaban ligadas a una tarjeta.
+  tarjetaId: integer("tarjeta_id").references(() => tarjetas.id),
   transaccionOrigenId: integer("transaccion_origen_id").references(() => transacciones.id),
   comercio: text("comercio").notNull(),
   montoTotal: real("monto_total").notNull(),
@@ -185,6 +189,12 @@ export const comprasCuotas = sqliteTable("compras_cuotas", {
   totalCuotas: integer("total_cuotas").notNull(),
   cuotasPagadas: integer("cuotas_pagadas").notNull().default(0),
   fechaCompra: text("fecha_compra").notNull(),
+  // Día del mes (1-31) en que vence el pago — reemplaza fechaCompra para
+  // calcular la próxima fecha de vencimiento (se calcula en vivo: día X de
+  // este mes, o del que viene si ya pasó). Nullable porque las compras viejas
+  // no lo tienen cargado; fechaCompra se mantiene tal cual para "cuándo se
+  // hizo la compra".
+  diaPago: integer("dia_pago"),
   // Campo viejo, ya no se escribe (reemplazado por pagosCuota) — se deja sin
   // borrar para no perder el dato histórico que ya tenía.
   ultimoPagoMes: text("ultimo_pago_mes"),
@@ -207,22 +217,33 @@ export const pagosCuota = sqliteTable(
 
 // --- Metas de compra --------------------------------------------------------
 // Presupuesto para algo puntual que querés comprar (no un gasto recurrente).
-// Mismo principio que fondoEmergencia: el progreso NO se guarda como un
-// número aparte que se pueda desincronizar — se deriva en vivo de una
-// categoría dedicada (categoriaId, bucket 'ahorro', autogenerada al crear la
-// meta). Aportar a la meta es simplemente registrar un movimiento con esa
-// categoría, igual que cualquier otro gasto/ahorro de la app.
+// Hasta Fase 3 del plan de correcciones, el progreso se derivaba de una
+// categoría dedicada (bucket 'ahorro', autogenerada al crear la meta) —
+// "aportar" era registrar un movimiento con esa categoría. Se descartó:
+// forzaba una transacción bancaria por algo que muchas veces es solo "ya
+// aparté esta plata", y de paso inflaba el bucket "Ahorro" del Plan de
+// gasto consciente con compras puntuales que no son ahorro real.
+// Fase 8+: se terminó de cortar — TODA meta usa `montoAhorrado` (editable a
+// mano, también se puede sumar desde "¿esto cubre algo?" del formulario de
+// movimiento). El progreso de las metas viejas se migró una única vez a
+// montoAhorrado (ver scripts/backfill-metas-monto-ahorrado.ts) antes de
+// cortar la lógica que lo derivaba en vivo.
 export const metasCompra = sqliteTable("metas_compra", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   nombre: text("nombre").notNull(),
   precioObjetivo: real("precio_objetivo").notNull(),
   fechaDeseada: text("fecha_deseada"), // "YYYY-MM-DD", opcional
-  metodoPago: text("metodo_pago").notNull(), // 'contado' | 'cuotas' | 'cobranzas'
-  categoriaId: integer("categoria_id").references(() => categorias.id).notNull(),
-  // Si metodoPago='cuotas' y ya se concretó la compra, se vincula acá — el
-  // progreso pasa a leerse de comprasCuotas en vez de la categoría.
+  metodoPago: text("metodo_pago").notNull(), // 'contado' | 'cobranzas' — 'cuotas' ya no se ofrece (ver datos viejos abajo)
+  // Legado — ya no se usa para calcular progreso (ver comentario arriba).
+  // Se deja sin borrar porque las metas viejas la tienen asignada y archivar
+  // la categoría al eliminar una meta sigue leyendo esta columna.
+  categoriaId: integer("categoria_id").references(() => categorias.id),
+  // Legado — método de pago 'cuotas' ya no se ofrece; puede seguir poblada
+  // en metas viejas pero no se lee para calcular progreso.
   compraCuotaId: integer("compra_cuota_id").references(() => comprasCuotas.id),
   estado: text("estado").notNull().default("activa"), // 'activa' | 'completada' | 'cancelada'
+  // Único campo de progreso — toda meta (nueva o vieja) lo usa.
+  montoAhorrado: real("monto_ahorrado").notNull().default(0),
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 

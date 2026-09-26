@@ -16,6 +16,7 @@ import {
 } from "@/db/queries";
 import { evaluarInsights } from "@/logic/insights";
 import { deltaMonto, deltaPuntos } from "@/logic/comparaciones";
+import { mesActual, mesAnteriorDe, nombreMes } from "@/logic/mes";
 
 export const dynamic = "force-dynamic";
 
@@ -53,20 +54,6 @@ const ICONO_ALERTA = (
   </svg>
 );
 
-function mesActual(): string {
-  return new Date().toISOString().slice(0, 7);
-}
-
-function mesAnteriorDe(mes: string): string {
-  const [anio, m] = mes.split("-").map(Number);
-  return m === 1 ? `${anio - 1}-12` : `${anio}-${String(m - 1).padStart(2, "0")}`;
-}
-
-function nombreMes(mes: string): string {
-  const [anio, m] = mes.split("-").map(Number);
-  return new Intl.DateTimeFormat("es-PE", { month: "long" }).format(new Date(anio, m - 1, 1));
-}
-
 function estadoBarra(pct: number | null): "" | "warn" | "over" {
   if (pct === null) return "";
   if (pct >= 100) return "over";
@@ -86,8 +73,13 @@ export default async function InicioPage() {
   const mes = mesActual();
   const cuentas = await listarCuentas();
   const saldos = await Promise.all(cuentas.map((c) => saldoCuenta(c.id)));
-  // "Líquidas" excluye tarjetas de crédito — esas son deuda, no plata disponible.
-  const saldoTotal = cuentas.reduce((acc, c, i) => (c.tipo === "tarjeta_credito" ? acc : acc + saldos[i]), 0);
+  // "Líquidas" excluye tarjetas de crédito siempre (son deuda, no plata
+  // disponible) y, además, cualquier cuenta que el usuario haya marcado como
+  // no-líquida a mano (ej. una cuenta de inversión o compartida).
+  const saldoTotal = cuentas.reduce(
+    (acc, c, i) => (c.tipo === "tarjeta_credito" || !c.incluirEnLiquidas ? acc : acc + saldos[i]),
+    0
+  );
   const destacadas = cuentas
     .map((c, i) => ({ cuenta: c, saldo: saldos[i] }))
     .filter((x) => x.cuenta.destacada);
@@ -294,7 +286,7 @@ export default async function InicioPage() {
 
       <div className="stats-label">Compromisos recurrentes</div>
       <div className="commit-row">
-        <Link href="/presupuesto" className="commit-chip">
+        <Link href="/presupuesto?tab=extras" className="commit-chip">
           <div className="commit-icon" aria-hidden="true">
             {ICONO_SUSCRIPCIONES}
           </div>
@@ -303,7 +295,7 @@ export default async function InicioPage() {
             <span className="commit-val tabular">S/ {totalSuscripciones.toFixed(2)}</span>
           </div>
         </Link>
-        <Link href="/presupuesto" className="commit-chip">
+        <Link href="/presupuesto?tab=extras" className="commit-chip">
           <div className="commit-icon" aria-hidden="true">
             {ICONO_CUOTAS}
           </div>
@@ -312,7 +304,7 @@ export default async function InicioPage() {
             <span className="commit-val tabular">S/ {totalCuotas.toFixed(2)}</span>
           </div>
         </Link>
-        <Link href="/cuentas" className={`commit-chip${totalDeuda > 0 ? " warn" : ""}`}>
+        <Link href="/cuentas?tab=deudas" className={`commit-chip${totalDeuda > 0 ? " warn" : ""}`}>
           <div className="commit-icon" aria-hidden="true">
             {ICONO_DEUDA}
           </div>
@@ -372,7 +364,7 @@ export default async function InicioPage() {
         <>
           <div className="section-head with-action">
             <div className="section-title">Categorías a vigilar</div>
-            <Link href="/presupuesto" className="text-link">
+            <Link href="/presupuesto?tab=categorias" className="text-link">
               Ver más
             </Link>
           </div>
@@ -390,7 +382,7 @@ export default async function InicioPage() {
                           {` / S/ ${FORMATO.format(categoria.limiteMensual)}`}
                         </>
                       ) : (
-                        <Link href="/presupuesto" className="text-link">
+                        <Link href="/presupuesto?tab=categorias" className="text-link">
                           Configura un límite →
                         </Link>
                       )}
@@ -418,7 +410,7 @@ export default async function InicioPage() {
 
       <div className="section-head with-action">
         <div className="section-title">Plan de gasto consciente</div>
-        <Link href="/presupuesto" className="text-link">
+        <Link href="/presupuesto?tab=plan" className="text-link">
           Ver más
         </Link>
       </div>

@@ -1,8 +1,8 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "f9b4e30a-f21e-420a-9336-1ff41556464b",
-  "prevId": "d0f25d88-2acd-4ea1-bd62-66dc7bda4076",
+  "id": "fc47acff-bd1e-4b25-8735-8dc71e577bae",
+  "prevId": "f9b4e30a-f21e-420a-9336-1ff41556464b",
   "tables": {
     "categorias": {
       "name": "categorias",
@@ -354,6 +354,14 @@
           "autoincrement": false,
           "default": false
         },
+        "incluir_en_liquidas": {
+          "name": "incluir_en_liquidas",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": true
+        },
         "created_at": {
           "name": "created_at",
           "type": "text",
@@ -593,14 +601,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "monto_ahorrado": {
-          "name": "monto_ahorrado",
-          "type": "real",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
         "fecha_deseada": {
           "name": "fecha_deseada",
           "type": "text",
@@ -636,6 +636,14 @@
           "notNull": true,
           "autoincrement": false,
           "default": "'activa'"
+        },
+        "monto_ahorrado": {
+          "name": "monto_ahorrado",
+          "type": "real",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
         },
         "created_at": {
           "name": "created_at",

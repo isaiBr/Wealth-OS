@@ -5,7 +5,12 @@ import { TabPillsGroup, TabPanel } from "@/components/TabPills";
 
 export const dynamic = "force-dynamic";
 
-export default async function ConfiguracionPage() {
+interface Props {
+  searchParams: Promise<{ tab?: string }>;
+}
+
+export default async function ConfiguracionPage({ searchParams }: Props) {
+  const params = await searchParams;
   const categorias = await listarCategorias();
   const reglas = await listarReglasCategorizacion();
   const tags = await listarTags();
@@ -26,17 +31,12 @@ export default async function ConfiguracionPage() {
           { key: "etiquetas", label: "Etiquetas" },
           { key: "reglas", label: "Reglas" },
         ]}
+        initialTab={params.tab}
       >
-        <div className="dashboard-grid">
-          <div className="col-main">
-            <ConfiguracionView categorias={categorias} tags={tags} />
-          </div>
-          <div className="col-side">
-            <TabPanel tabKey="reglas">
-              <ReglasCategorizacionView categorias={categorias} reglas={reglas} configuracion={configuracion} />
-            </TabPanel>
-          </div>
-        </div>
+        <ConfiguracionView categorias={categorias} tags={tags} />
+        <TabPanel tabKey="reglas">
+          <ReglasCategorizacionView categorias={categorias} reglas={reglas} configuracion={configuracion} />
+        </TabPanel>
       </TabPillsGroup>
     </div>
   );

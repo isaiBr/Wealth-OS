@@ -123,8 +123,40 @@ button {
   }
 }
 
+/* ---------- loading.tsx: fallback de navegación entre pantallas ---------- */
+.route-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 96px 0;
+  color: var(--ink-muted);
+  font-size: 13px;
+}
+.route-loading-spinner {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-strong);
+  animation: route-loading-spin 0.7s linear infinite;
+}
+@keyframes route-loading-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .screen-head {
   margin-bottom: 18px;
+}
+.screen-head-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  justify-content: space-between;
 }
 .screen-title {
   font-size: 23px;
@@ -136,6 +168,158 @@ button {
   color: var(--ink-muted);
   margin-top: 5px;
   line-height: 1.5;
+}
+
+/* ---------- selector de mes (Movimientos, Presupuesto) ---------- */
+.mes-selector-wrap {
+  position: relative;
+  display: flex;
+}
+.mes-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-strong);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.mes-trigger:hover {
+  opacity: 0.8;
+}
+.mes-panel-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 29;
+  background: transparent;
+}
+.mes-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 250px;
+  max-width: calc(100vw - 32px);
+  z-index: 30;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(22, 33, 27, 0.16);
+  padding: 14px;
+}
+.mes-panel-anio {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-bottom: 12px;
+}
+.mes-panel-anio-label {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  min-width: 44px;
+  text-align: center;
+}
+.mes-nav-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  text-decoration: none;
+}
+.mes-nav-btn:hover {
+  background: var(--surface-sunken);
+}
+.mes-nav-btn.small {
+  width: 28px;
+  height: 28px;
+  font-size: 13px;
+}
+.mes-nav-btn:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+  pointer-events: none;
+  border-color: transparent;
+}
+.mes-panel-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.mes-mes-btn {
+  padding: 8px 0;
+  border-radius: 8px;
+  text-align: center;
+  font-family: var(--font-sans), sans-serif;
+  font-size: 12.5px;
+  font-weight: 500;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.mes-mes-btn:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+.mes-mes-btn.active {
+  font-weight: 600;
+  border-color: var(--accent-strong);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+.mes-mes-btn:disabled {
+  color: var(--ink-faint);
+  cursor: default;
+  opacity: 0.5;
+}
+
+/* ---------- filtros de Movimientos ---------- */
+.mov-filtros {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 18px;
+}
+.mov-filtro-select {
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 40px;
+  flex: 1 1 140px;
+}
+.mov-filtro-texto {
+  display: flex;
+  gap: 6px;
+  flex: 1 1 220px;
+}
+.mov-filtro-texto input {
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  min-height: 40px;
+  flex: 1;
+  min-width: 0;
 }
 
 /* ---------- topbar ---------- */
@@ -428,14 +612,45 @@ button {
   cursor: pointer;
   padding: 0;
 }
+.text-link.danger {
+  color: var(--danger);
+}
+.text-link:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
 
-/* ---------- submenu de pills dentro de una pantalla (mobile) ---------- */
+/* ---------- pills: primer nivel de navegación de una pantalla ---------- */
+.tab-pills-group {
+  width: 100%;
+}
+@media (min-width: 900px) {
+  /* Ancho de lectura razonable — sin esto, un panel angosto (ej. una lista
+     de cuentas) queda estirado a los ~1100px del contenedor completo. */
+  .tab-pills-group {
+    max-width: 760px;
+  }
+}
 .tab-pills {
   display: flex;
   gap: 8px;
   overflow-x: auto;
   margin: 0 0 18px;
   padding-bottom: 1px;
+}
+/* Fila que combina las pills con contenido extra (ej. "Mostrar filtros")
+   pegado al borde derecho. */
+.tab-pills-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: flex-end;
+  margin: 0 0 18px;
+}
+.tab-pills-row .tab-pills {
+  flex: 1 1 auto;
+  min-width: 0;
+  margin: 0;
 }
 .tab-pills button {
   flex-shrink: 0;
@@ -464,16 +679,56 @@ button {
 .tab-panel.active-panel {
   display: block;
 }
-@media (min-width: 900px) {
-  /* en desktop las dos columnas ya muestran todo — las pills solo aplican a mobile */
-  .tab-pills {
-    display: none;
-  }
-  .tab-panel {
-    display: block;
-  }
-}
 
+/* Subpills locales (Pendientes/Historial en Deudas/Cobranzas) — a diferencia
+   de .tab-pills de arriba, estas SÍ quedan visibles también en desktop: son
+   la navegación real entre "lo pendiente" y un historial paginado, no un
+   atajo mobile para algo que en desktop ya se ve todo junto. */
+.subpills {
+  display: flex;
+  gap: 8px;
+  margin: 2px 0 14px;
+}
+.subpills button {
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 13px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+.subpills button.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
+  font-size: 12px;
+  color: var(--ink-muted);
+}
+.pagination button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+.pagination button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
 /* ---------- hero (Inicio) ---------- */
 .hero-row {
   display: flex;
@@ -815,6 +1070,19 @@ button {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+/* Separa cuentas normales de tarjetas de crédito — puramente visual, la
+   distinción ya existe vía cuenta.tipo. */
+.cuentas-subhead {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  margin: 18px 0 8px;
+}
+.cuentas-subhead:first-child {
+  margin-top: 0;
 }
 .cuenta {
   display: flex;
@@ -1222,6 +1490,73 @@ button {
   color: var(--ink-muted);
 }
 
+/* Menú de fila "⋯" — agrupa editar/marcar pagado/eliminar cuando una fila
+   tiene 3 o más acciones, en vez de saturarla de íconos sueltos. */
+.row-menu {
+  position: relative;
+  flex-shrink: 0;
+}
+.row-menu-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--ink-muted);
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.row-menu-btn:hover {
+  background: var(--surface-sunken);
+}
+.row-menu-list {
+  position: absolute;
+  top: 36px;
+  right: 0;
+  width: 180px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(22, 33, 27, 0.16);
+  padding: 6px;
+  z-index: 10;
+}
+.row-menu-list button {
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 9px 10px;
+  border-radius: 7px;
+  font-size: 12.5px;
+  color: var(--ink);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.row-menu-list button:hover {
+  background: var(--surface-sunken);
+}
+.row-menu-list button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.row-menu-list button.danger {
+  color: var(--danger);
+}
+.row-menu-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  flex-shrink: 0;
+}
+
 /* ---------- categorías (Presupuesto) ---------- */
 .cat-row {
   padding: 12px 0;
@@ -1371,6 +1706,8 @@ button {
   padding: 0;
   font-size: 12px;
   line-height: 1;
+  display: inline-flex;
+  align-items: center;
 }
 .tag-cloud .tx-tag-pill button:hover {
   opacity: 1;
@@ -1415,6 +1752,45 @@ button.tx-tag-pill.toggle.active {
 }
 
 /* ---------- categorías editables (Configuración) ---------- */
+.acordeon-bucket {
+  border-bottom: 1px solid var(--border);
+}
+.acordeon-bucket:last-of-type {
+  border-bottom: none;
+}
+.acordeon-bucket summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  list-style: none;
+}
+.acordeon-bucket summary::-webkit-details-marker {
+  display: none;
+}
+.acordeon-bucket summary::before {
+  content: "▸";
+  color: var(--ink-muted);
+  font-weight: 700;
+  font-size: 13px;
+  margin-right: 9px;
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+.acordeon-bucket[open] summary::before {
+  transform: rotate(90deg);
+}
+.acordeon-bucket summary .n {
+  margin-left: auto;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--ink-faint);
+}
 .cfg-row {
   display: flex;
   justify-content: space-between;
@@ -1423,8 +1799,11 @@ button.tx-tag-pill.toggle.active {
   padding: 12px 0;
   border-bottom: 1px solid var(--border);
 }
-.cfg-row:last-child {
+.acordeon-bucket .cfg-row:last-child {
   border-bottom: none;
+}
+.acordeon-bucket .cfg-row {
+  padding-left: 22px;
 }
 .cfg-left {
   display: flex;
@@ -1579,6 +1958,63 @@ button.tx-tag-pill.toggle.active {
   border-color: var(--accent);
 }
 
+/* "+ Más opciones" del formulario de movimiento — categoría, sin
+   contabilizar y "¿esto cubre algo?" quedan detrás, cerrado por default. */
+.advanced-toggle {
+  display: flex;
+  align-items: center;
+  padding: 13px 0;
+  margin-top: 4px;
+  border-top: 1px dashed var(--border);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  list-style: none;
+}
+.advanced-toggle::-webkit-details-marker {
+  display: none;
+}
+.advanced-toggle::before {
+  content: "▸";
+  margin-right: 7px;
+  font-size: 11px;
+  color: var(--accent-strong);
+  transition: transform 0.15s;
+  display: inline-block;
+}
+details[open] > .advanced-toggle::before {
+  transform: rotate(90deg);
+}
+.advanced-body {
+  padding-top: 6px;
+}
+.cover-option {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-top: 10px;
+  background: var(--surface-sunken);
+}
+.cover-check-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 0;
+  font-size: 13px;
+}
+.cover-check-row input {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  min-height: 0;
+}
+.cover-check-row .monto {
+  margin-left: auto;
+  color: var(--ink-muted);
+  font-size: 12px;
+}
+
 .btn-primary {
   background: var(--accent-strong);
   color: #fff;
@@ -1593,6 +2029,21 @@ button.tx-tag-pill.toggle.active {
 }
 .btn-primary:hover {
   background: var(--accent);
+}
+.btn-danger {
+  background: var(--danger);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 44px;
+  width: 100%;
+}
+.btn-danger:hover {
+  opacity: 0.9;
 }
 .btn-secondary {
   background: none;
@@ -1639,6 +2090,7 @@ button.tx-tag-pill.toggle.active {
   gap: 10px;
   margin-top: 6px;
 }
-.modal-actions .btn-primary {
+.modal-actions .btn-primary,
+.modal-actions .btn-danger {
   flex: 1;
 }

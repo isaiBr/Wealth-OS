@@ -3,8 +3,18 @@
 import { useState } from "react";
 import { Modal } from "@/components/Modal";
 import { TransaccionForm } from "@/components/TransaccionForm";
-import { obtenerTransaccionesAction, alternarTagAction, alternarExcluidaAction, crearYAsignarTagAction } from "./actions";
-import type { Cuenta, Categoria, Transaccion, Tag } from "@/db/queries";
+import { obtenerTransaccionesAction, alternarTagAction, crearYAsignarTagAction } from "./actions";
+import type {
+  Cuenta,
+  Categoria,
+  Transaccion,
+  Tag,
+  FiltrosMovimientos,
+  CuotaActiva,
+  DeudaManual,
+  Cobranza,
+  MetaCompraConProgreso,
+} from "@/db/queries";
 
 interface Props {
   cuentas: Cuenta[];
@@ -13,6 +23,11 @@ interface Props {
   tags: Tag[];
   tagsPorTxInicial: Map<number, Tag[]>;
   mes: string;
+  filtros?: FiltrosMovimientos;
+  cuotasSinPagar: CuotaActiva[];
+  deudasPendientes: DeudaManual[];
+  cobranzasPendientes: Cobranza[];
+  metas: MetaCompraConProgreso[];
 }
 
 const FORMATO_DIA = new Intl.DateTimeFormat("es-PE", { day: "numeric", month: "short" });
@@ -38,7 +53,19 @@ function etiquetaDia(fechaISO: string): string {
   return FORMATO_DIA.format(fecha);
 }
 
-export function MovimientosView({ cuentas, categorias, transacciones: inicial, tags, tagsPorTxInicial, mes }: Props) {
+export function MovimientosView({
+  cuentas,
+  categorias,
+  transacciones: inicial,
+  tags,
+  tagsPorTxInicial,
+  mes,
+  filtros,
+  cuotasSinPagar,
+  deudasPendientes,
+  cobranzasPendientes,
+  metas,
+}: Props) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editando, setEditando] = useState<Transaccion | undefined>(undefined);
   const [gestionandoId, setGestionandoId] = useState<number | null>(null);
@@ -101,7 +128,7 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
   async function cargarMas() {
     setCargando(true);
     try {
-      const { transacciones: nuevas, tagsPorTx: tagsNuevos } = await obtenerTransaccionesAction(mes, offset);
+      const { transacciones: nuevas, tagsPorTx: tagsNuevos } = await obtenerTransaccionesAction(mes, offset, filtros);
       setTransacciones([...transacciones, ...nuevas]);
       setTagsPorTx(new Map([...tagsPorTx, ...tagsNuevos]));
       setOffset(offset + 50);
@@ -120,12 +147,6 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
     nuevoMapa.set(transaccionId, activo ? actuales.filter((t) => t.id !== tag.id) : [...actuales, tag]);
     setTagsPorTx(nuevoMapa);
     alternarTagAction(transaccionId, tag.id, !activo);
-  }
-
-  function toggleExcluida(t: Transaccion) {
-    const nuevoValor = !t.excluida;
-    setTransacciones(transacciones.map((x) => (x.id === t.id ? { ...x, excluida: nuevoValor } : x)));
-    alternarExcluidaAction(t.id, nuevoValor);
   }
 
   async function crearYAsignarTag(transaccionId: number) {
@@ -214,7 +235,7 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
                         <button
                           className="tx-tag-pill add"
                           type="button"
-                          aria-label={`Etiquetas y "sin contabilizar" de ${t.comercio || "este movimiento"}`}
+                          aria-label={`Etiquetas de ${t.comercio || "este movimiento"}`}
                           onClick={() => setGestionandoId(t.id)}
                         >
                           + etiqueta
@@ -245,7 +266,16 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
       </div>
 
       {modalAbierto && (
-        <TransaccionForm cuentas={cuentas} categorias={categorias} transaccion={editando} onClose={() => setModalAbierto(false)} />
+        <TransaccionForm
+          cuentas={cuentas}
+          categorias={categorias}
+          transaccion={editando}
+          onClose={() => setModalAbierto(false)}
+          cuotasSinPagar={cuotasSinPagar}
+          deudasPendientes={deudasPendientes}
+          cobranzasPendientes={cobranzasPendientes}
+          metas={metas}
+        />
       )}
 
       {gestionando && (
@@ -297,17 +327,6 @@ export function MovimientosView({ cuentas, categorias, transacciones: inicial, t
             <span className="section-sub" style={{ margin: "6px 0 0", display: "block" }}>
               Para eliminar una etiqueta, andá a Configuración.
             </span>
-          </div>
-          <div className="field" style={{ marginTop: 16 }}>
-            <label htmlFor="excluida-quick" style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}>
-              <input
-                id="excluida-quick"
-                type="checkbox"
-                checked={gestionando.excluida}
-                onChange={() => toggleExcluida(gestionando)}
-              />
-              Sin contabilizar (excluir de totales de gasto/ingreso)
-            </label>
           </div>
           <div className="modal-actions">
             <button type="button" className="btn-primary" onClick={() => setGestionandoId(null)}>

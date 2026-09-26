@@ -1,0 +1,1 @@
+ALTER TABLE `cuentas` ADD `incluir_en_liquidas` integer DEFAULT true NOT NULL;
