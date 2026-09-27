@@ -1,11 +1,16 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { eq } from "drizzle-orm";
+import { eq, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { briefs } from "@/db/schema";
 import { briefSchema, type Brief } from "./brief-schema";
 import { listarTemas, obtenerConfiguracionBrief, type BriefTema } from "./queries";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+// Retención: no tiene sentido guardar noticias viejas para siempre, y cada
+// fila es un JSON completo (~15-25KB). 30 días de historial es de sobra para
+// mirar hacia atrás sin que la tabla crezca sin límite.
+const RETENCION_DIAS = 30;
 
 const MODEL = "claude-haiku-4-5-20251001";
 
@@ -203,5 +208,14 @@ export async function generarYGuardarBrief(date: string, force = false): Promise
     await db.delete(briefs).where(eq(briefs.date, date));
   }
   await db.insert(briefs).values({ date, rawJson });
+  await limpiarBriefsAntiguos();
   return { status: "ok" };
+}
+
+/** Borra briefs de hace más de `dias` días — ver RETENCION_DIAS. `date` es texto "YYYY-MM-DD", el orden lexicográfico ya sirve para comparar. */
+async function limpiarBriefsAntiguos(dias = RETENCION_DIAS): Promise<void> {
+  const limite = new Date();
+  limite.setDate(limite.getDate() - dias);
+  const limiteStr = limite.toISOString().slice(0, 10);
+  await db.delete(briefs).where(lt(briefs.date, limiteStr));
 }
