@@ -214,6 +214,25 @@ Piezas nuevas en `src/components/`:
 
 **Todo de una vez**, confirmado 2026-09-19. Con el tamaño real ya auditado (21 archivos, 1 tabla, sin auth, sin tests — "portable en una sola sentada"), no hay código suficiente como para justificar el costo de mantener un puente/convivencia temporal con el stack viejo — media migración (rutas portadas pero `BriefView` todavía en shadcn) sería más trabajo neto que hacerlo completo de una sentada.
 
+**Nota de reconciliación (2026-09-27):** este worktree (`fase-b1-scaffolding-finanzas`) no tiene una sección "2.11 Restricción de acceso" que sí existe en el plan del checkout principal (sin commitear ahí) — al mergear de vuelta a main hay que revisar que no choquen los números de sección.
+
+### 2.11 Rediseño del pipeline de generación de Brief (agregado 2026-09-27)
+
+**Motivación:** B.4 (portación de rutas/BriefView) se completó y se verificó con un brief real, pero ese primer brief con Sonnet 5 + `web_search` abierto (hasta 20 búsquedas) consumió ~328k tokens (~$1) en una sola corrida — a ese ritmo, el cron diario de B.5 saldría en ~$30/mes. Se prototipó (fuera de `src/`, en `scripts/_prototype-*.ts`, todos descartables) un pipeline alternativo y se validó con corridas reales antes de portarlo a código.
+
+**Diseño validado:**
+1. **Fetch gratis (sin LLM):** RSS de Google News por tema (`news.google.com/rss/search?q=...&hl=es-419&gl=PE`), hasta 25 candidatos por tema — cero costo, es solo HTTP.
+2. **Temas configurables** (antes hardcodeados en el prompt): nueva tabla `brief_temas` (nombre, query de búsqueda, cantidad garantizada por día, activo) editable desde una pantalla de Configuración dentro del dominio Brief — reemplaza las 5 categorías fijas del schema original de Daily Brief (`ai_tech`/`cloud`/`business`/`investments`/`peru_geopolitics`).
+3. **Filtro barato (Haiku 4.5, sin tools):** de la lista de titulares pooleados, elige N por tema (garantizado, para que ningún tema quede en 0 como pasaba con un filtro global único).
+4. **Enriquecido gratis:** scrape de `og:description`/`meta description` de cada artículo seleccionado (fetch plano, sin LLM).
+5. **Síntesis barata (Haiku 4.5, sin tools):** con solo esos ~15-20 artículos ya elegidos, redacta el brief. Para no repetir el mismo gasto que el intento con schema completo en todas las categorías (que salió en ~$1.82/mes), **las categorías llevan formato liviano** (título + fuente + link + 1 línea) y **solo el Top 5 lleva el análisis completo** Hecho/Interpretación/Predicción. Costo estimado con este reparto: **~$0.75-0.90/mes** (vs. ~$30/mes del enfoque original), sin traducir contenido en inglés (ahorra otro paso, y nunca se tradujo de todos modos).
+6. **Toggle "Resumen con IA"** (fila única de configuración, `brief_configuracion.resumen_con_ia`): apagado, el cron solo hace fetch + un ranking sin IA (orden propio de Google + de-duplicado por similitud de texto, gratis) y guarda título/fuente/link por tema sin análisis; la UI muestra un aviso invitando a prenderlo. Prendido, corre el flujo completo de los puntos 1-5.
+7. **UI de Brief:** en vez del scroll único portado en B.4, pasa a pills (Top 5 / Categorías / Extras / Config) usando el `TabPillsGroup` que ya existe en `src/components/TabPills.tsx` — y a diferencia del resto de la app, en Brief las pills se mantienen visibles también en desktop (Categorías/Extras en grid de 2 columnas) porque el contenido es una lista larga homogénea, no dos columnas naturales como Cuentas/Presupuesto.
+
+**Prototipado y validado en:** `docs/dashboard-mockup-v6.html` (pills + loading + pantalla de Config) y corridas reales de `scripts/_prototype-brief-cheap.ts` / `_prototype-brief-no-ai.ts` (no committeados, se pueden borrar una vez portado a código real).
+
+**Pendiente de portar a código real** (no bloquea nada de Fase C): tabla `brief_temas` + `brief_configuracion` y su migración, reescritura de `generate-brief.ts`/`brief-schema.ts`, pantalla de Configuración de Brief, reescritura de `BriefView.tsx` con pills. El cron (B.5) sigue pendiente y ahora depende de este rediseño en vez del `generate-brief.ts` original.
+
 ## 3. Fase C — Producción de Finanzas (multi-usuario real)
 
 **Alcance:** alto impacto. Es lo que falta para poder invitar gente fuera de la casa a usar Finanzas OS con sus propios datos, aislados de los tuyos. Depende de que la Fase B ya haya aterrizado el shell compartido (mismo Clerk, mismo layout raíz) — no depende del contenido de Brief en sí, y no bloquea que Brief se siga mejorando en paralelo.
