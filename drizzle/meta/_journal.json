@@ -162,6 +162,13 @@
       "when": 1790464454160,
       "tag": "0022_dazzling_shen",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "6",
+      "when": 1790469830874,
+      "tag": "0023_silly_christian_walker",
+      "breakpoints": true
     }
   ]
 }

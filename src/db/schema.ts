@@ -323,3 +323,33 @@ export const briefs = sqliteTable("briefs", {
 });
 export type Brief = typeof briefs.$inferSelect;
 export type NewBrief = typeof briefs.$inferInsert;
+
+// --- Brief: temas de interés (rediseño §2.11) --------------------------------
+// Reemplaza las 5 categorías fijas que traía el Daily Brief original — cada
+// tema se busca por separado en la generación (ver generate-brief.ts) para
+// garantizar `cantidad` noticias de ese tema, sin que un tema popular (ej. IA)
+// se coma el cupo de uno más chico (ej. inversiones).
+export const briefTemas = sqliteTable("brief_temas", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  nombre: text("nombre").notNull(),
+  // Clave estable usada como key en categories{} del JSON del brief — no
+  // cambia aunque se renombre el tema, para no romper briefs históricos.
+  clave: text("clave").notNull().unique(),
+  query: text("query").notNull(), // términos de búsqueda para el RSS de Google News
+  cantidad: integer("cantidad").notNull().default(3),
+  activo: integer("activo", { mode: "boolean" }).notNull().default(true),
+  orden: integer("orden").notNull().default(0),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+export type BriefTema = typeof briefTemas.$inferSelect;
+export type NewBriefTema = typeof briefTemas.$inferInsert;
+
+// --- Brief: configuración general (fila única, mismo patrón que configuracionIa) ---
+export const briefConfiguracion = sqliteTable("brief_configuracion", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // Apagado: el cron solo hace fetch + ranking sin IA (gratis) y guarda
+  // título/fuente/link por tema, sin análisis — ver generate-brief.ts.
+  resumenConIa: integer("resumen_con_ia", { mode: "boolean" }).notNull().default(true),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+export type BriefConfiguracion = typeof briefConfiguracion.$inferSelect;
