@@ -214,6 +214,18 @@ Piezas nuevas en `src/components/`:
 
 **Todo de una vez**, confirmado 2026-09-19. Con el tamaño real ya auditado (21 archivos, 1 tabla, sin auth, sin tests — "portable en una sola sentada"), no hay código suficiente como para justificar el costo de mantener un puente/convivencia temporal con el stack viejo — media migración (rutas portadas pero `BriefView` todavía en shadcn) sería más trabajo neto que hacerlo completo de una sentada.
 
+**Estado real (2026-09-26):** B.1, B.2 y B.3 ya están implementados en la rama/worktree `fase-b1-scaffolding-finanzas` (commits `cd9eedc`, `b959db7`, `0cd0643`) — route group `(finanzas)/` creado, tabla `briefs` migrada, `DomainSwitcherButton`/`DomainSwitcherSheet` funcionando. Esa rama además ya se actualizó con todos los commits de `main` posteriores (merge `7e87816`, ver worktree). Falta B.4 (portar rutas y `BriefView` reales), B.5 (cron) y B.6 (verificación e2e) — Prompt 6 más abajo sigue vigente tal cual para arrancar B.4.
+
+### 2.11 Restricción de acceso: Brief es solo para el dueño del producto (agregado 2026-09-26)
+
+Decisión nueva, todavía sin implementar: **Brief queda restringido al usuario dueño del producto** — no es un dominio que se ofrezca a las personas invitadas de la marcha blanca de Fase C (§3). Cada quien tiene su propio Finanzas aislado; Brief sigue siendo de un solo usuario.
+
+Esto es una dependencia cruzada entre B y C que no existía cuando se escribió el resto de este plan (en ese momento Fase C ni arrancaba). Implicaciones a resolver **cuando exista el modelo `userId`/`usuarios` de Fase C** (no bloquea B.4-B.6, que se pueden hacer igual mientras solo exista un usuario real):
+
+- `DomainSwitcherSheet` (§2.6) no debe ofrecer la opción "Brief" a un usuario que no sea el dueño — hoy no importa porque solo hay un usuario, pero hay que acordarse de agregar ese check antes de invitar a la primera persona externa.
+- Las rutas bajo `/brief/*` y `/api/cron/brief-generate` necesitan su propio control de acceso por `userId`/flag admin (mismo flag admin ya contemplado en §3.4), no solo depender de que el switcher no muestre el link — alguien podría entrar a la URL directo.
+- Registrado también en la memoria de sesión del proyecto (`project_finanzas_os_multiusuario_plan`) como parte de §3.4.
+
 ## 3. Fase C — Producción de Finanzas (multi-usuario real)
 
 **Alcance:** alto impacto. Es lo que falta para poder invitar gente fuera de la casa a usar Finanzas OS con sus propios datos, aislados de los tuyos. Depende de que la Fase B ya haya aterrizado el shell compartido (mismo Clerk, mismo layout raíz) — no depende del contenido de Brief en sí, y no bloquea que Brief se siga mejorando en paralelo.
@@ -261,6 +273,9 @@ El bloqueante real — nada de lo demás importa si esto no está resuelto prime
 
 - **Marcha blanca**: allowlist de Clerk + aislamiento por `userId` alcanza. Un flag `admin` (en `publicMetadata` de Clerk, o en una tabla `usuarios` liviana si conviene tenerlo fuera de Clerk) solo para el dueño del producto, para soporte/debug sin acceso raw a la BD de cada quien.
 - **Antes de abrir a público en general** (no bloquea la marcha blanca, pero hay que dejarlo agendado): cifrado de tokens ya resuelto desde el día uno (§3.0.5), rate limiting en los webhooks públicos, botón de "desconectar Gmail / borrar mi cuenta", política de privacidad (se está leyendo correo bancario de terceros), y recién ahí evaluar la verificación completa de Google si se decide abrir registro libre sin invitación.
+- **"Desconectar Gmail" ahora revoca el token en Google** (2026-09-26, sin commitear todavía en `fase-c-multiusuario`): antes solo detenía el `watch()` y borraba la fila de `gmail_conexiones` — el refresh token seguía siendo válido del lado de Google si se había filtrado antes de la desconexión. `revocarRefreshToken()` en `src/gmail/client.ts` llama a `oauth2Client.revokeToken()` (best-effort, igual que el stop del watch) antes de borrar la fila.
+- **Brief queda restringido al dueño del producto (agregado 2026-09-26, ver §2.11)**: cuando exista el modelo `userId`/`usuarios` de esta fase, el flag `admin` (o un check equivalente) debe usarse también para bloquear `/brief/*` y `/api/cron/brief-generate` a cualquiera que no sea el dueño, y el `DomainSwitcherSheet` no debe ofrecer esa opción a otros usuarios. No implementado todavía — Brief hoy ni siquiera está portado (B.4 pendiente).
+- **Pendiente de decidir (agregado 2026-09-26): ¿vale la pena rediseñar el pipeline de Gmail para que el dueño del producto nunca tenga acceso al token/correo de nadie más?** El diseño actual (OAuth server-side, refresh token cifrado en la BD, servidor decodifica y lee el correo) concentra el control en el operador — cifrar en reposo no cambia que el servidor necesita poder descifrar para funcionar. Opciones sobre la mesa, sin decidir todavía: (a) reenvío/filtro de Gmail — el usuario reenvía solo los correos bancarios a una dirección propia de la app, nunca se pide `gmail.readonly` completo; (b) un Google Apps Script que el usuario despliega en su propia cuenta (corre bajo la identidad de Google del usuario, nunca sale un token hacia el servidor, solo se manda la transacción ya parseada); (c) cifrado end-to-end de los datos financieros en reposo (ortogonal, no resuelve el acceso durante el parseo). Ver conversación del 2026-09-26 para el detalle de tradeoffs de cada una.
 
 ### 3.5 Onboarding de usuario nuevo
 
