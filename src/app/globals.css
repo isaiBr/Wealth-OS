@@ -2094,3 +2094,203 @@ details[open] > .advanced-toggle::before {
 .modal-actions .btn-danger {
   flex: 1;
 }
+
+/* ---------- Brief (dominio Brief, Fase B) ---------- */
+.brief-catbar {
+  display: flex;
+  height: 6px;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 6px;
+}
+.brief-catbar-legend {
+  font-size: 10px;
+  color: var(--ink-faint);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  margin-bottom: 4px;
+}
+.brief-historial-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.brief-historial-item {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13.5px;
+  color: var(--ink);
+  text-decoration: none;
+}
+.brief-historial-item:hover {
+  background: var(--surface-sunken);
+}
+.brief-story-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.brief-story-title {
+  font-family: var(--font-serif), serif;
+  font-optical-sizing: auto;
+  font-weight: 600;
+  font-size: 15.5px;
+  line-height: 1.35;
+  color: var(--ink);
+}
+.brief-story-summary {
+  font-size: 13px;
+  color: var(--ink-muted);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+.brief-triad-row {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 7px 0;
+}
+.brief-triad-tag {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 5px;
+  margin-top: 1px;
+}
+.brief-triad-row.hecho .brief-triad-tag {
+  color: #5b7686;
+  background: rgba(91, 118, 134, 0.12);
+}
+.brief-triad-row.interp .brief-triad-tag {
+  color: #b8860b;
+  background: rgba(184, 134, 11, 0.12);
+}
+.brief-triad-row.predic .brief-triad-tag {
+  color: #8b3a6b;
+  background: rgba(139, 58, 107, 0.12);
+}
+.brief-triad-text {
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.brief-story-why {
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px dashed var(--border);
+  font-size: 12.5px;
+  color: var(--ink-muted);
+  line-height: 1.5;
+}
+.brief-story-why b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.brief-story-source {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent-strong);
+  text-decoration: none;
+}
+.brief-story-source:hover {
+  text-decoration: underline;
+}
+.brief-extra-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.brief-extra-item {
+  font-size: 13px;
+}
+.brief-extra-item p {
+  color: var(--ink-muted);
+  line-height: 1.5;
+  margin-top: 4px;
+}
+.brief-extra-item p:first-of-type {
+  margin-top: 0;
+}
+.brief-extra-item b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.brief-extra-topic {
+  font-family: var(--font-serif), serif;
+  font-weight: 600;
+  color: var(--ink);
+}
+.brief-footer-date {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-faint);
+  padding-top: 20px;
+  margin-top: 8px;
+  border-top: 1px dashed var(--border);
+}
+
+/* ---------- Brief: pills (§2.11) — categorías en formato liviano con link directo ---------- */
+.brief-cat-section {
+  margin-bottom: 26px;
+}
+.brief-cat-section:last-child {
+  margin-bottom: 0;
+}
+.brief-cat-link {
+  display: block;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  text-decoration: none;
+}
+.brief-cat-link:hover {
+  background: var(--surface-sunken);
+}
+.brief-cat-link-title {
+  font-family: var(--font-serif), serif;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink);
+  line-height: 1.4;
+}
+.brief-cat-link-why {
+  font-size: 12px;
+  color: var(--ink-muted);
+  margin-top: 4px;
+  line-height: 1.4;
+}
+.brief-cat-link-source {
+  display: block;
+  font-size: 11px;
+  color: var(--ink-faint);
+  margin-top: 6px;
+}
+
+/* A diferencia del resto de la app, Brief mantiene las pills visibles también
+   en desktop: es una lista larga y homogénea, no dos columnas naturales como
+   Cuentas/Presupuesto (ver §2.11 del plan). `.brief-pills-group` lo marca
+   `TabPillsGroup` vía su prop `className` opcional. */
+@media (min-width: 900px) {
+  .brief-pills-group .tab-pills {
+    display: flex;
+  }
+  .brief-pills-group .tab-panel {
+    display: none;
+  }
+  .brief-pills-group .tab-panel.active-panel {
+    display: block;
+  }
+  .brief-pills-group .brief-extra-list {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+}

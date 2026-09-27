@@ -18,6 +18,9 @@ interface TabPillsGroupProps {
   // Tab con la que arrancar (ej. desde un link de Inicio con ?tab=extras) —
   // si no es una key válida de `tabs`, se ignora y arranca en la primera.
   initialTab?: string;
+  // Clase extra en el wrapper — usada por Brief para mantener las pills
+  // visibles también en desktop (ver .brief-pills-group en globals.css).
+  className?: string;
 }
 
 /**
@@ -28,7 +31,7 @@ interface TabPillsGroupProps {
  * limitado en desktop (ver .tab-pills-group en globals.css) para que un
  * panel angosto (ej. una lista de cuentas) no quede estirado a todo el ancho.
  */
-export function TabPillsGroup({ tabs, ariaLabel, children, extra, initialTab }: TabPillsGroupProps) {
+export function TabPillsGroup({ tabs, ariaLabel, children, extra, initialTab, className }: TabPillsGroupProps) {
   const inicial = initialTab && tabs.some((t) => t.key === initialTab) ? initialTab : (tabs[0]?.key ?? "");
   const [active, setActive] = useState(inicial);
 
@@ -49,7 +52,7 @@ export function TabPillsGroup({ tabs, ariaLabel, children, extra, initialTab }: 
 
   return (
     <TabPillsContext.Provider value={{ active, setActive }}>
-      <div className="tab-pills-group">
+      <div className={`tab-pills-group${className ? ` ${className}` : ""}`}>
         {extra ? (
           <div className="tab-pills-row">
             {nav}
