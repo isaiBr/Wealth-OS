@@ -2236,7 +2236,7 @@ details[open] > .advanced-toggle::before {
   border-top: 1px dashed var(--border);
 }
 
-/* ---------- Brief: pills (§2.11) — categorías en formato liviano con link directo ---------- */
+/* ---------- Brief: pills (§2.12) — categorías en formato liviano con link directo ---------- */
 .brief-cat-section {
   margin-bottom: 26px;
 }
@@ -2276,7 +2276,7 @@ details[open] > .advanced-toggle::before {
 
 /* A diferencia del resto de la app, Brief mantiene las pills visibles también
    en desktop: es una lista larga y homogénea, no dos columnas naturales como
-   Cuentas/Presupuesto (ver §2.11 del plan). `.brief-pills-group` lo marca
+   Cuentas/Presupuesto (ver §2.12 del plan). `.brief-pills-group` lo marca
    `TabPillsGroup` vía su prop `className` opcional. */
 @media (min-width: 900px) {
   .brief-pills-group .tab-pills {

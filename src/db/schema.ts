@@ -324,7 +324,7 @@ export const briefs = sqliteTable("briefs", {
 export type Brief = typeof briefs.$inferSelect;
 export type NewBrief = typeof briefs.$inferInsert;
 
-// --- Brief: temas de interés (rediseño §2.11) --------------------------------
+// --- Brief: temas de interés (rediseño §2.12) --------------------------------
 // Reemplaza las 5 categorías fijas que traía el Daily Brief original — cada
 // tema se busca por separado en la generación (ver generate-brief.ts) para
 // garantizar `cantidad` noticias de ese tema, sin que un tema popular (ej. IA)

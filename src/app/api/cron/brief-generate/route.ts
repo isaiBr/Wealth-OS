@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 // Llamado por Vercel Cron (ver vercel.json) — no pasa por Clerk (excluido en
 // proxy.ts), se autentica con el mismo CRON_SECRET que gmail-watch-renew.
 //
-// Con el pipeline de RSS + Haiku (ver generate-brief.ts, §2.11 del plan) esto
+// Con el pipeline de RSS + Haiku (ver generate-brief.ts, §2.12 del plan) esto
 // corre en segundos, no minutos como el enfoque viejo con web_search — entra
 // sin problema en el límite de 60s que ya da el plan Hobby de Vercel, sin
 // necesitar Pro.

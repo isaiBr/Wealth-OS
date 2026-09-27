@@ -17,7 +17,7 @@ const MODEL = "claude-haiku-4-5-20251001";
 // --- Fetch de candidatos (gratis, sin LLM) ----------------------------------
 // RSS de Google News por tema — reemplaza la tool web_search abierta que
 // usaba el Daily Brief original. Ver docs/plan-reestructuracion-multidominio.md
-// §2.11 para el porqué (costo: ~$1/día con web_search abierto vs. centavos acá).
+// §2.12 para el porqué (costo: ~$1/día con web_search abierto vs. centavos acá).
 
 type Candidato = { title: string; source: string; link: string; clave: string };
 
@@ -66,7 +66,7 @@ async function enrichSnippet(link: string): Promise<string | null> {
 // Usado cuando brief_configuracion.resumen_con_ia está apagado: sin ningún
 // llamado a Claude, solo el orden que ya trae Google (su propio ranking de
 // relevancia) + de-duplicado por similitud de texto entre títulos del mismo
-// tema. Ver §2.11 — en la práctica la señal de "cobertura" rara vez encuentra
+// tema. Ver §2.12 — en la práctica la señal de "cobertura" rara vez encuentra
 // duplicados exactos, así que esto termina siendo cercano al orden de Google.
 function palabrasSignificativas(titulo: string): Set<string> {
   return new Set(

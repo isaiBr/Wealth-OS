@@ -11,7 +11,7 @@ const storyItem = z.object({
   source_url: z.string(),
 });
 
-// Formato liviano para las categorías (§2.11 del plan) — a diferencia de
+// Formato liviano para las categorías (§2.12 del plan) — a diferencia de
 // top5, no lleva el análisis completo Hecho/Interpretación/Predicción, solo
 // el enlace y una razón corta. `why` queda vacío cuando el brief se generó
 // con el resumen de IA apagado (solo fetch + ranking, ver generate-brief.ts).
