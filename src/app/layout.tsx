@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Fraunces, Public_Sans } from "next/font/google";
 import { ClerkProvider, UserButton } from "@clerk/nextjs";
 import "./globals.css";
@@ -19,6 +19,15 @@ const publicSans = Public_Sans({
 export const metadata: Metadata = {
   title: "Wealth OS",
   description: "Finanzas personales automatizadas",
+  appleWebApp: {
+    capable: true,
+    title: "Wealth OS",
+    statusBarStyle: "default",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0b5c42",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
