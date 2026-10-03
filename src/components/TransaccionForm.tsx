@@ -92,9 +92,13 @@ export function TransaccionForm({
   // mismo número de operación y tumbar la página. Para una edición sobre
   // una transacción real, el tipo original se manda tal cual, sin selector.
   const tipoEditable = !esEdicion || transaccion!.fuente === "manual";
-  // "¿Esto cubre algo?" solo tiene sentido para compra/ingreso — una
-  // transferencia, un pago de servicio, etc. no "cubren" nada.
+  // "¿Esto cubre algo?" aplica a compra/ingreso (y deuda/meta en transferencias) — un
+  // pago de servicio, devolución, etc. no "cubren" nada.
   const tipoEfectivo = tipoEditable ? tipo : transaccion!.tipo;
+  // Una transferencia o retiro a una persona (ej. pagarle a alguien que te
+  // prestó plata) cubre lo mismo que una compra: cuota, deuda o meta.
+  const puedeCubrirComoGasto =
+    tipoEfectivo === "compra" || tipoEfectivo === "transferencia" || tipoEfectivo === "retiro";
 
   return (
     <Modal onClose={onClose}>
@@ -220,7 +224,7 @@ export function TransaccionForm({
               </label>
             </div>
 
-            {(tipoEfectivo === "compra" || tipoEfectivo === "ingreso") && (
+            {(puedeCubrirComoGasto || tipoEfectivo === "ingreso") && (
               <div className="field">
                 <label htmlFor="cubreTipo">¿Este movimiento cubre algo?</label>
                 <select
@@ -230,8 +234,8 @@ export function TransaccionForm({
                   onChange={(e) => setCubreTipo(e.target.value as CubreTipo)}
                 >
                   <option value="no">No</option>
-                  {tipoEfectivo === "compra" && <option value="cuota">Una cuota de tarjeta</option>}
-                  {tipoEfectivo === "compra" && <option value="deuda">Una deuda pendiente</option>}
+                  {puedeCubrirComoGasto && <option value="cuota">Una cuota de tarjeta</option>}
+                  {puedeCubrirComoGasto && <option value="deuda">Una deuda pendiente</option>}
                   {tipoEfectivo === "ingreso" && <option value="cobranza">Una cobranza pendiente</option>}
                   <option value="meta">Una meta de compra</option>
                 </select>
