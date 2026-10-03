@@ -7,6 +7,7 @@ import {
   listarCategorias,
   listarCuentas,
   obtenerFondoEmergencia,
+  obtenerOcultarSaldos,
   patrimonioHistorico,
   presupuestoPorCategoria,
   resumenMes,
@@ -21,6 +22,8 @@ import { mesActual, mesAnteriorDe, nombreMes } from "@/logic/mes";
 export const dynamic = "force-dynamic";
 
 const FORMATO = new Intl.NumberFormat("es-PE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const MASCARA_SALDO = "S/ ••••••";
 
 const BUCKETS: { clave: string; nombre: string; color: string; descripcion: string }[] = [
   { clave: "fijos", nombre: "Costos fijos", color: "var(--ink)", descripcion: "Vivienda, servicios, deudas" },
@@ -72,7 +75,8 @@ function formatHora(fechaIso: string): string {
 export default async function InicioPage() {
   const mes = mesActual();
   const cuentas = await listarCuentas();
-  const saldos = await Promise.all(cuentas.map((c) => saldoCuenta(c.id)));
+  const ocultarSaldos = await obtenerOcultarSaldos();
+  const saldos =await Promise.all(cuentas.map((c) => saldoCuenta(c.id)));
   // "Líquidas" excluye tarjetas de crédito siempre (son deuda, no plata
   // disponible) y, además, cualquier cuenta que el usuario haya marcado como
   // no-líquida a mano (ej. una cuenta de inversión o compartida).
@@ -191,11 +195,11 @@ export default async function InicioPage() {
         <div className="card hero-primary">
           <div className="hero-eyebrow">Cada sol tiene un trabajo asignado</div>
           <div className="label">Disponible real hoy</div>
-          <div className="valor tabular">S/ {disponibleReal.toFixed(2)}</div>
+          <div className="valor tabular">{ocultarSaldos ? MASCARA_SALDO : `S/ ${disponibleReal.toFixed(2)}`}</div>
           <div className="desglose">
             <div className="row">
               <span>En cuentas líquidas</span>
-              <b className="tabular">S/ {saldoTotal.toFixed(2)}</b>
+              <b className="tabular">{ocultarSaldos ? MASCARA_SALDO : `S/ ${saldoTotal.toFixed(2)}`}</b>
             </div>
             {totalCuotas > 0 && (
               <div className="row">
@@ -504,7 +508,7 @@ export default async function InicioPage() {
                   </div>
                 </div>
               </div>
-              <div className="saldo tabular">S/ {saldo.toFixed(2)}</div>
+              <div className="saldo tabular">{ocultarSaldos ? MASCARA_SALDO : `S/ ${saldo.toFixed(2)}`}</div>
             </div>
           ))
         )}

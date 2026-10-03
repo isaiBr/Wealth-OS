@@ -5,6 +5,7 @@ import {
   cobranzas,
   comprasCuotas,
   configuracionIa,
+  configuracionFinanzas,
   cuentas,
   deudasManuales,
   fondoEmergencia,
@@ -788,7 +789,6 @@ export async function editarCuotasPagadas(
   nuevoDiaPago?: number
 ): Promise<void> {
   const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compraCuotaId));
-  const nuevaBase = Math.max(0, nuevoTotal - pagos.length);
   // Si el total pedido es menor que los pagos por mes ya registrados (ej. bajar
   // a 0 una cuota con el pago de este mes marcado), la base sola no alcanza:
   // se borran los pagos más recientes que sobran para que el total cuadre.
@@ -797,6 +797,7 @@ export async function editarCuotasPagadas(
     const aBorrar = [...pagos].sort((a, b) => b.mes.localeCompare(a.mes)).slice(0, sobran);
     await db.delete(pagosCuota).where(inArray(pagosCuota.id, aBorrar.map((p) => p.id)));
   }
+  const nuevaBase = Math.max(0, nuevoTotal - pagos.length);
   await db
     .update(comprasCuotas)
     .set({
@@ -1102,6 +1103,21 @@ export async function actualizarConfiguracionIA(input: Partial<ConfiguracionIa>)
     await db.update(configuracionIa).set(input).where(eq(configuracionIa.id, existente.id));
   } else {
     await db.insert(configuracionIa).values({ sugerirConIa: true, aprenderReglasNuevas: true, ...input });
+  }
+}
+
+/** Sin fila todavía = saldos visibles. */
+export async function obtenerOcultarSaldos(): Promise<boolean> {
+  const fila = await db.select().from(configuracionFinanzas).orderBy(desc(configuracionFinanzas.id)).limit(1).get();
+  return fila?.ocultarSaldos ?? false;
+}
+
+export async function actualizarOcultarSaldos(ocultarSaldos: boolean): Promise<void> {
+  const existente = await db.select().from(configuracionFinanzas).orderBy(desc(configuracionFinanzas.id)).limit(1).get();
+  if (existente) {
+    await db.update(configuracionFinanzas).set({ ocultarSaldos }).where(eq(configuracionFinanzas.id, existente.id));
+  } else {
+    await db.insert(configuracionFinanzas).values({ ocultarSaldos });
   }
 }
 

@@ -32,9 +32,11 @@ interface Identificador {
 export function CuentasView({
   cuentas,
   identificadoresPorCuenta,
+  ocultarSaldos,
 }: {
   cuentas: CuentaConSaldo[];
   identificadoresPorCuenta: Record<number, Identificador[]>;
+  ocultarSaldos: boolean;
 }) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [tipoNueva, setTipoNueva] = useState("ahorro");
@@ -136,7 +138,7 @@ export function CuentasView({
           </div>
         </div>
         <div className="row-right">
-          <div className="saldo tabular">S/ {c.saldo.toFixed(2)}</div>
+          <div className="saldo tabular">{ocultarSaldos ? "S/ ••••••" : `S/ ${c.saldo.toFixed(2)}`}</div>
           <button
             type="button"
             className="edit-btn"

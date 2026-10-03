@@ -268,6 +268,15 @@ export const configuracionIa = sqliteTable("configuracion_ia", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 
+// --- Preferencias generales de Finanzas -------------------------------------
+// Fila única (mismo patrón que configuracionIa). Sin fila todavía = defaults.
+export const configuracionFinanzas = sqliteTable("configuracion_finanzas", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  // Enmascara "Disponible real" y los saldos de cuentas (Inicio y Cuentas).
+  ocultarSaldos: integer("ocultar_saldos", { mode: "boolean" }).notNull().default(false),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+
 // --- Fondo de emergencia ----------------------------------------------------
 // Fila única — el "monto actual" no se duplica acá, se lee en vivo del saldo
 // de la cuenta ligada (mismo principio que el resto de la app: nada de
@@ -350,12 +359,12 @@ export const briefConfiguracion = sqliteTable("brief_configuracion", {
   // Apagado: el cron solo hace fetch + ranking sin IA (gratis) y guarda
   // título/fuente/link por tema, sin análisis — ver generate-brief.ts.
   resumenConIa: integer("resumen_con_ia", { mode: "boolean" }).notNull().default(true),
-  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
-});
-export type BriefConfiguracion = typeof briefConfiguracion.$inferSelect;
   // Lock de generación: seteado al arrancar una corrida (cron o botón "Generar
   // ahora"), null al terminar. Permite bloquear el botón entre pantallas y
   // evitar dos corridas a la vez — ver intentarIniciarGeneracionBrief en
   // queries.ts. Si queda colgado (server caído a mitad de corrida) se trata
   // como vencido después de LOCK_TIMEOUT_MS.
   generandoDesde: integer("generando_desde", { mode: "timestamp" }),
+  createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
+});
+export type BriefConfiguracion = typeof briefConfiguracion.$inferSelect;

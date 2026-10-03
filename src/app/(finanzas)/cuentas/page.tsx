@@ -5,8 +5,10 @@ import {
   listarDeudasManuales,
   listarIdentificadoresCuenta,
   obtenerFondoEmergencia,
+  obtenerOcultarSaldos,
   saldoCuenta,
 } from "@/db/queries";
+import { OcultarSaldosToggle } from "@/components/OcultarSaldosToggle";
 import { CuentasView } from "./CuentasView";
 import { FondoEmergenciaView } from "./FondoEmergenciaView";
 import { CobranzasView } from "./CobranzasView";
@@ -34,6 +36,7 @@ export default async function CuentasPage({ searchParams }: Props) {
       saldo: await saldoCuenta(c.id),
     }))
   );
+  const ocultarSaldos = await obtenerOcultarSaldos();
   const fondo = await obtenerFondoEmergencia();
   const deudas = await deudaPendiente();
   const cobranzas = await listarCobranzas();
@@ -47,7 +50,10 @@ export default async function CuentasPage({ searchParams }: Props) {
   return (
     <div className="screen">
       <div className="screen-head">
-        <div className="screen-title">Cuentas</div>
+        <div className="screen-head-row">
+          <div className="screen-title">Cuentas</div>
+          <OcultarSaldosToggle ocultos={ocultarSaldos} />
+        </div>
         <div className="screen-sub">Saldo reconstruido: saldo inicial + movimientos detectados — no es un pull en vivo del banco.</div>
       </div>
       <TabPillsGroup
@@ -61,7 +67,11 @@ export default async function CuentasPage({ searchParams }: Props) {
         initialTab={params.tab}
       >
         <TabPanel tabKey="cuentas">
-          <CuentasView cuentas={cuentasConSaldo} identificadoresPorCuenta={identificadoresPorCuenta} />
+          <CuentasView
+            cuentas={cuentasConSaldo}
+            identificadoresPorCuenta={identificadoresPorCuenta}
+            ocultarSaldos={ocultarSaldos}
+          />
         </TabPanel>
 
         <TabPanel tabKey="fondo">

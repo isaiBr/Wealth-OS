@@ -20,10 +20,17 @@ import {
   marcarDeudaManualPagada,
   eliminarDeudaManual,
   corregirDeudaTarjeta,
+  actualizarOcultarSaldos,
 } from "@/db/queries";
 
 function redondear(monto: number): number {
   return Math.round(monto * 100) / 100;
+}
+
+export async function alternarOcultarSaldosAction(ocultar: boolean) {
+  await actualizarOcultarSaldos(ocultar);
+  revalidatePath("/cuentas");
+  revalidatePath("/");
 }
 
 export async function crearCuentaAction(formData: FormData) {
