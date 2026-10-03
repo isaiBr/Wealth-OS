@@ -353,3 +353,9 @@ export const briefConfiguracion = sqliteTable("brief_configuracion", {
   createdAt: text("created_at").notNull().default(sql`(current_timestamp)`),
 });
 export type BriefConfiguracion = typeof briefConfiguracion.$inferSelect;
+  // Lock de generación: seteado al arrancar una corrida (cron o botón "Generar
+  // ahora"), null al terminar. Permite bloquear el botón entre pantallas y
+  // evitar dos corridas a la vez — ver intentarIniciarGeneracionBrief en
+  // queries.ts. Si queda colgado (server caído a mitad de corrida) se trata
+  // como vencido después de LOCK_TIMEOUT_MS.
+  generandoDesde: integer("generando_desde", { mode: "timestamp" }),

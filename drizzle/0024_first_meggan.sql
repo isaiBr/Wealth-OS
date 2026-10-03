@@ -1,0 +1,1 @@
+ALTER TABLE `brief_configuracion` ADD `generando_desde` integer;

@@ -58,7 +58,7 @@ export async function actualizarResumenConIaAction(resumenConIa: boolean) {
  * así clickearlo dos veces el mismo día no gasta de más. Para forzar habría
  * que ir directo al endpoint del cron con `?force=true`.
  */
-export async function generarBriefAhoraAction(): Promise<{ status: "ok" | "skipped"; date: string }> {
+export async function generarBriefAhoraAction(): Promise<{ status: "ok" | "skipped" | "en_curso"; date: string }> {
   const date = todayInLima();
   const resultado = await generarYGuardarBrief(date, false);
   revalidatePath("/brief");

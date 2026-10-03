@@ -22,24 +22,39 @@ interface Tema {
   activo: boolean;
 }
 
-export function ConfigBriefView({ temas, resumenConIa }: { temas: Tema[]; resumenConIa: boolean }) {
+export function ConfigBriefView({
+  temas,
+  resumenConIa,
+  generandoInicial,
+}: {
+  temas: Tema[];
+  resumenConIa: boolean;
+  generandoInicial: boolean;
+}) {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [editandoTema, setEditandoTema] = useState<Tema | null>(null);
   const [eliminandoTema, setEliminandoTema] = useState<Tema | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [actualizandoIa, setActualizandoIa] = useState(false);
-  const [generando, setGenerando] = useState(false);
-  const [mensajeGenerar, setMensajeGenerar] = useState<string | null>(null);
+  // Arranca en el estado que ya tenía el server (lock en brief_configuracion)
+  // para que, si venías de otra pantalla mientras una corrida seguía en
+  // curso, el botón siga bloqueado en vez de reiniciarse a "listo".
+  const [generando, setGenerando] = useState(generandoInicial);
+  const [mensajeGenerar, setMensajeGenerar] = useState<string | null>(
+    generandoInicial ? "Generando el brief de hoy..." : null
+  );
 
   async function handleGenerarAhora() {
     setGenerando(true);
-    setMensajeGenerar(null);
+    setMensajeGenerar("Generando el brief de hoy...");
     try {
       const resultado = await generarBriefAhoraAction();
       setMensajeGenerar(
         resultado.status === "skipped"
           ? `Ya había un brief para hoy (${resultado.date}) — no se generó de nuevo.`
-          : `Listo, brief de hoy (${resultado.date}) generado.`
+          : resultado.status === "en_curso"
+            ? "Ya hay una generación en curso — esperá a que termine."
+            : `Listo, brief de hoy (${resultado.date}) generado.`
       );
     } catch (e) {
       setMensajeGenerar(e instanceof Error ? e.message : "No se pudo generar el brief");

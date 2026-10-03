@@ -3,7 +3,13 @@ import { eq, lt } from "drizzle-orm";
 import { db } from "@/db/client";
 import { briefs } from "@/db/schema";
 import { briefSchema, type Brief } from "./brief-schema";
-import { listarTemas, obtenerConfiguracionBrief, type BriefTema } from "./queries";
+import {
+  listarTemas,
+  obtenerConfiguracionBrief,
+  intentarIniciarGeneracionBrief,
+  finalizarGeneracionBrief,
+  type BriefTema,
+} from "./queries";
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -195,21 +201,31 @@ export async function generateBrief(date: string): Promise<Brief> {
  * cron (api/cron/brief-generate) y el botón "Generar ahora" de Configuración,
  * para no duplicar el chequeo de "ya existe" / `force`.
  */
-export async function generarYGuardarBrief(date: string, force = false): Promise<{ status: "ok" | "skipped" }> {
+export async function generarYGuardarBrief(
+  date: string,
+  force = false
+): Promise<{ status: "ok" | "skipped" | "en_curso" }> {
   if (!force) {
     const existente = await db.select({ id: briefs.id }).from(briefs).where(eq(briefs.date, date)).limit(1);
     if (existente.length > 0) return { status: "skipped" };
   }
 
-  const brief = await generateBrief(date);
-  const rawJson = JSON.stringify(brief);
+  const tomoLock = await intentarIniciarGeneracionBrief();
+  if (!tomoLock) return { status: "en_curso" };
 
-  if (force) {
-    await db.delete(briefs).where(eq(briefs.date, date));
+  try {
+    const brief = await generateBrief(date);
+    const rawJson = JSON.stringify(brief);
+
+    if (force) {
+      await db.delete(briefs).where(eq(briefs.date, date));
+    }
+    await db.insert(briefs).values({ date, rawJson });
+    await limpiarBriefsAntiguos();
+    return { status: "ok" };
+  } finally {
+    await finalizarGeneracionBrief();
   }
-  await db.insert(briefs).values({ date, rawJson });
-  await limpiarBriefsAntiguos();
-  return { status: "ok" };
 }
 
 /** Borra briefs de hace más de `dias` días — ver RETENCION_DIAS. `date` es texto "YYYY-MM-DD", el orden lexicográfico ya sirve para comparar. */
