@@ -13,6 +13,11 @@ Este documento recoge lo decidido en la sesión siguiente, después de probar es
 - **Código real: sin empezar.** Nada de lo de este documento está implementado todavía — es el siguiente paso de la próxima sesión.
 - Ver también los "puntos fuera de alcance" al final — están anotados a propósito, no son pendientes.
 
+### Verificado en código (2026-09-26)
+
+- **"¿Esto cubre algo?" en edición**: confirmado que ya funciona igual que en creación, no es un gap. `TransaccionForm.tsx` es un único componente para crear/editar (`transaccion?` define `esEdicion`), y el bloque de cobertura solo depende de que el tipo efectivo sea compra/ingreso — no de si es alta o edición. `actualizarTransaccionAction` llama `aplicarCobertura` igual que `crearTransaccionAction`. No aplica solo cuando el movimiento editado tiene un tipo distinto de compra/ingreso (ej. transferencia, pago de servicio, importado de correo) — ahí no hay nada que "cubrir".
+- **`loading.tsx` entre tabs**: sigue siendo el spinner genérico de la raíz (`src/app/loading.tsx`), sin `loading.tsx` propio en ninguna ruta de `(finanzas)/` ni de `brief/` — cubre ambos dominios por igual. Es el comportamiento esperado (ver comentario en el archivo), el backlog de skeleton por pantalla sigue sin empezar.
+
 ### Próximos pasos sugeridos (orden razonable para implementar)
 
 1. Schema: `compras_cuotas` (quitar `tarjeta_id` obligatorio, agregar `dia_pago`), `metas_compra` (dejar de depender de `categoria_id`, migrar progreso viejo a `montoAhorrado`, quitar opción "cuotas" del selector de método).

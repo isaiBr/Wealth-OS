@@ -167,7 +167,9 @@ export function TransaccionForm({
           <input id="fecha" name="fecha" type="date" defaultValue={fechaDefault} required />
         </div>
 
-        <details>
+        {/* Abierto al editar: el "¿cubre algo?" vive acá adentro y colapsado
+            parecía que solo existía al crear. */}
+        <details open={esEdicion}>
           <summary className="advanced-toggle">Más opciones (categoría, sin contabilizar, vínculos)</summary>
           <div className="advanced-body">
             <div className="field">

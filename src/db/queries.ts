@@ -789,6 +789,14 @@ export async function editarCuotasPagadas(
 ): Promise<void> {
   const pagos = await db.select().from(pagosCuota).where(eq(pagosCuota.compraCuotaId, compraCuotaId));
   const nuevaBase = Math.max(0, nuevoTotal - pagos.length);
+  // Si el total pedido es menor que los pagos por mes ya registrados (ej. bajar
+  // a 0 una cuota con el pago de este mes marcado), la base sola no alcanza:
+  // se borran los pagos más recientes que sobran para que el total cuadre.
+  const sobran = pagos.length - nuevoTotal;
+  if (sobran > 0) {
+    const aBorrar = [...pagos].sort((a, b) => b.mes.localeCompare(a.mes)).slice(0, sobran);
+    await db.delete(pagosCuota).where(inArray(pagosCuota.id, aBorrar.map((p) => p.id)));
+  }
   await db
     .update(comprasCuotas)
     .set({
